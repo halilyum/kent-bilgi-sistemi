@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="theme-color" content="#0d0900" />
+  <title>Kula Kent Rehberi — Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Noto+Serif+TR:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --gold:#c9a84c;--gold-l:#e8c97a;--gold-d:#8b6914;
+      --ink:#0d0900;--ink2:#1a1200;
+      --parch:#f5edd6;--parch2:#ede0be;
+      --surf:#1e1608;--surf2:#2a1f08;
+      --border:rgba(201,168,76,.18);
+      --r:14px;--rs:8px;
+      --fh:'Cinzel',serif;--fb:'Noto Serif TR',serif;
+    }
+    html{scroll-behavior:smooth}
+    body{background:var(--ink);color:var(--parch);font-family:var(--fb);min-height:100dvh;-webkit-tap-highlight-color:transparent}
+
+    /* ─── LOGIN ─── */
+    #login-screen{min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(ellipse at 50% 0%,rgba(201,168,76,.08) 0%,transparent 65%)}
+    .login-card{width:100%;max-width:400px;background:var(--surf);border:1px solid var(--border);border-radius:24px;padding:40px 28px 32px;box-shadow:0 24px 64px rgba(0,0,0,.7)}
+    .login-logo{text-align:center;margin-bottom:36px}
+    .login-emblem{font-size:52px;display:block;margin-bottom:14px;filter:drop-shadow(0 0 18px rgba(201,168,76,.4))}
+    .login-logo h1{font-family:var(--fh);font-size:17px;color:var(--gold);letter-spacing:.12em}
+    .login-logo p{font-size:11px;color:rgba(245,237,214,.38);letter-spacing:.14em;margin-top:5px}
+    .fg{margin-bottom:16px}
+    .fl{display:block;font-size:11px;letter-spacing:.1em;color:var(--gold-d);text-transform:uppercase;margin-bottom:8px}
+    .fi{width:100%;background:rgba(245,237,214,.04);border:1.5px solid rgba(201,168,76,.2);border-radius:var(--rs);padding:14px 16px;color:var(--parch);font-family:var(--fb);font-size:16px;outline:none;transition:border-color .2s,background .2s;-webkit-appearance:none}
+    .fi:focus{border-color:var(--gold-d);background:rgba(245,237,214,.07)}
+    .fi::placeholder{color:rgba(245,237,214,.2)}
+    .pw-wrap{position:relative}
+    .pw-wrap .fi{padding-right:50px}
+    .toggle-pw{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(245,237,214,.35);font-size:18px;cursor:pointer;padding:4px;line-height:1}
+    .btn-login{width:100%;min-height:54px;background:linear-gradient(135deg,var(--gold-d),var(--gold));color:var(--ink);border:none;border-radius:var(--rs);font-family:var(--fh);font-size:14px;letter-spacing:.1em;cursor:pointer;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .2s,transform .15s;box-shadow:0 4px 20px rgba(201,168,76,.25)}
+    .btn-login:active{transform:scale(.98);opacity:.9}
+    .btn-login:disabled{opacity:.45;cursor:not-allowed;transform:none}
+    .err-box{display:none;align-items:center;gap:10px;background:rgba(153,27,27,.15);border:1px solid rgba(153,27,27,.35);border-radius:var(--rs);padding:12px 14px;margin-top:14px;font-size:13px;color:#fca5a5}
+    .err-box.show{display:flex}
+    .login-hint{text-align:center;font-size:11px;color:rgba(245,237,214,.18);margin-top:20px}
+
+    /* ─── SHELL ─── */
+    #admin-shell{display:none}
+    #admin-header{position:sticky;top:0;z-index:50;background:var(--ink2);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between}
+    .admin-logo{display:flex;align-items:center;gap:10px}
+    .admin-logo .em{font-size:22px}
+    .logo-txt h1{font-family:var(--fh);font-size:13px;color:var(--gold);letter-spacing:.08em}
+    .logo-txt p{font-size:10px;color:rgba(245,237,214,.32);letter-spacing:.06em}
+    .hdr-right{display:flex;align-items:center;gap:10px}
+    .user-chip{display:flex;align-items:center;gap:6px;background:rgba(201,168,76,.08);border:1px solid var(--border);border-radius:99px;padding:6px 12px 6px 8px;font-size:12px;color:var(--gold)}
+    .avatar{width:24px;height:24px;background:var(--gold);color:var(--ink);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--fh);font-size:11px;font-weight:800;flex-shrink:0}
+    .btn-logout{width:40px;height:40px;border-radius:50%;border:1px solid var(--border);background:transparent;color:rgba(245,237,214,.5);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s}
+    .btn-logout:hover{background:rgba(153,27,27,.15);color:#fca5a5}
+    #demo-banner{background:rgba(201,168,76,.07);border-bottom:1px solid rgba(201,168,76,.14);padding:8px 20px;font-size:12px;color:var(--gold-d);text-align:center;display:none}
+    #demo-banner.show{display:block}
+
+    /* ─── STATS ─── */
+    .stats-row{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;padding:20px 20px 8px}
+    @media(min-width:600px){.stats-row{grid-template-columns:repeat(4,1fr)}}
+    .stat-card{background:var(--surf);border:1px solid var(--border);border-radius:var(--r);padding:16px;text-align:center}
+    .stat-num{font-family:var(--fh);font-size:30px;color:var(--gold);line-height:1}
+    .stat-lbl{font-size:10px;color:rgba(245,237,214,.38);letter-spacing:.08em;margin-top:5px;text-transform:uppercase}
+
+    /* ─── SECTION ─── */
+    .section{padding:12px 20px 40px}
+    .sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px}
+    .sec-title{font-family:var(--fh);font-size:13px;color:var(--gold);letter-spacing:.08em}
+    .btn-add{display:flex;align-items:center;gap:6px;background:var(--gold);color:var(--ink);border:none;border-radius:99px;padding:10px 18px;font-family:var(--fh);font-size:12px;letter-spacing:.06em;cursor:pointer;min-height:44px;white-space:nowrap;transition:opacity .15s;flex-shrink:0}
+    .btn-add:active{opacity:.8}
+
+    /* ─── CARDS ─── */
+    .place-list{display:grid;gap:12px}
+    @media(min-width:600px){.place-list{grid-template-columns:1fr 1fr}}
+    .pcard{background:var(--surf);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;transition:border-color .15s}
+    .pcard:hover{border-color:rgba(201,168,76,.3)}
+    .pcard-top{display:flex;align-items:center;gap:14px;padding:14px}
+    .pthumb{width:56px;height:56px;border-radius:var(--rs);background:rgba(201,168,76,.06);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;overflow:hidden}
+    .pthumb img{width:100%;height:100%;object-fit:cover}
+    .pinfo{flex:1;min-width:0}
+    .pname{font-family:var(--fh);font-size:13px;color:var(--gold-l);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .pcat{font-size:11px;color:rgba(245,237,214,.42)}
+    .pactions{display:flex;gap:6px;padding:0 14px 14px;flex-wrap:wrap}
+    .bsm{height:36px;padding:0 12px;border-radius:var(--rs);border:none;cursor:pointer;font-size:12px;font-family:var(--fb);display:flex;align-items:center;gap:5px;transition:opacity .15s;white-space:nowrap;min-height:36px}
+    .bsm:active{opacity:.75}
+    .bedit{background:rgba(201,168,76,.1);color:var(--gold);border:1px solid rgba(201,168,76,.2)}
+    .bqr{background:rgba(37,99,235,.12);color:#93c5fd;border:1px solid rgba(37,99,235,.2)}
+    .bdel{background:rgba(153,27,27,.12);color:#fca5a5;border:1px solid rgba(153,27,27,.2)}
+    .empty{text-align:center;padding:40px 20px;color:rgba(245,237,214,.28);font-size:14px;grid-column:1/-1}
+    .empty-icon{font-size:40px;display:block;margin-bottom:12px}
+
+    /* ─── MODAL ─── */
+    .mo{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.75);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+    .mo.open{opacity:1;pointer-events:all}
+    @media(min-width:600px){.mo{align-items:center}}
+    .ms{width:100%;max-width:600px;background:var(--surf);border:1px solid var(--border);border-top-left-radius:22px;border-top-right-radius:22px;max-height:93dvh;overflow-y:auto;overscroll-behavior:contain;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1)}
+    .mo.open .ms{transform:translateY(0)}
+    @media(min-width:600px){.ms{border-radius:22px;max-height:88dvh;transform:scale(.96) translateY(8px)}.mo.open .ms{transform:scale(1) translateY(0)}}
+    .mhandle{width:36px;height:4px;background:rgba(245,237,214,.12);border-radius:2px;margin:12px auto 0}
+    .mhdr{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surf);z-index:2}
+    .mtitle{font-family:var(--fh);font-size:15px;color:var(--gold-l);letter-spacing:.04em}
+    .mclose{width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:transparent;color:var(--parch2);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+    .mbody{padding:20px;display:grid;gap:14px}
+    .frow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .fta{width:100%;min-height:96px;background:rgba(245,237,214,.04);border:1.5px solid rgba(201,168,76,.2);border-radius:var(--rs);padding:12px 14px;color:var(--parch);font-family:var(--fb);font-size:14px;outline:none;resize:vertical;transition:border-color .2s}
+    .fta:focus{border-color:var(--gold-d)}
+    .fsel{width:100%;background:rgba(245,237,214,.04);border:1.5px solid rgba(201,168,76,.2);border-radius:var(--rs);padding:13px 14px;color:var(--parch);font-family:var(--fb);font-size:15px;outline:none;appearance:none;-webkit-appearance:none;cursor:pointer}
+    option{background:var(--surf2);color:var(--parch)}
+    .photo-lbl{display:block;border:2px dashed rgba(201,168,76,.22);border-radius:var(--r);padding:20px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s}
+    .photo-lbl:hover{border-color:rgba(201,168,76,.45);background:rgba(201,168,76,.03)}
+    .photo-lbl input{display:none}
+    .photo-prev{width:100%;max-height:160px;object-fit:cover;border-radius:var(--rs);margin-bottom:10px;display:none}
+    .photo-prev.show{display:block}
+    .photo-hint{font-size:13px;color:rgba(245,237,214,.32);line-height:1.5}
+    .photo-hint strong{color:rgba(201,168,76,.55)}
+    .btn-gps{display:flex;align-items:center;gap:6px;background:rgba(37,99,235,.1);border:1px solid rgba(37,99,235,.25);border-radius:var(--rs);color:#93c5fd;padding:10px 14px;font-size:13px;cursor:pointer;width:100%;justify-content:center;min-height:44px;transition:background .15s;font-family:var(--fb)}
+    .btn-gps:active{background:rgba(37,99,235,.18)}
+    .mftr{display:flex;gap:10px;padding:12px 20px 28px;position:sticky;bottom:0;background:var(--surf);border-top:1px solid var(--border)}
+    .btn-cancel{flex:1;min-height:52px;background:rgba(245,237,214,.05);border:1px solid var(--border);color:var(--parch2);border-radius:var(--rs);font-family:var(--fb);font-size:14px;cursor:pointer}
+    .btn-save{flex:2;min-height:52px;background:linear-gradient(135deg,var(--gold-d),var(--gold));color:var(--ink);border:none;border-radius:var(--rs);font-family:var(--fh);font-size:13px;letter-spacing:.08em;cursor:pointer;transition:opacity .15s}
+    .btn-save:disabled{opacity:.45;cursor:not-allowed}
+
+    /* ─── QR MODAL ─── */
+    .qr-body{display:flex;flex-direction:column;align-items:center;gap:16px;padding:24px}
+    #qr-canvas{border:10px solid white;border-radius:4px;display:block}
+    .qr-name{font-family:var(--fh);font-size:15px;color:var(--gold-l);text-align:center}
+    .qr-val{font-size:11px;color:rgba(245,237,214,.28);text-align:center;font-family:monospace;word-break:break-all;max-width:260px}
+    .btn-print{display:flex;align-items:center;gap:8px;background:var(--gold);color:var(--ink);border:none;border-radius:var(--rs);padding:14px 28px;font-family:var(--fh);font-size:13px;letter-spacing:.08em;cursor:pointer;min-height:52px}
+    .btn-print:active{opacity:.85}
+
+    /* ─── CONFIRM ─── */
+    .conf-ov{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;padding:24px;opacity:0;pointer-events:none;transition:opacity .2s}
+    .conf-ov.open{opacity:1;pointer-events:all}
+    .conf-card{background:var(--surf);border:1px solid rgba(153,27,27,.35);border-radius:20px;padding:28px 24px 24px;max-width:340px;width:100%;text-align:center}
+    .conf-icon{font-size:40px;margin-bottom:14px}
+    .conf-title{font-family:var(--fh);font-size:16px;color:var(--parch);margin-bottom:8px}
+    .conf-msg{font-size:13px;color:rgba(245,237,214,.5);line-height:1.5;margin-bottom:20px}
+    .conf-acts{display:flex;gap:10px}
+    .btn-no{flex:1;min-height:48px;background:rgba(245,237,214,.06);border:1px solid var(--border);color:var(--parch2);border-radius:var(--rs);font-family:var(--fb);font-size:14px;cursor:pointer}
+    .btn-yes{flex:1;min-height:48px;background:rgba(153,27,27,.8);border:none;color:#fca5a5;border-radius:var(--rs);font-family:var(--fh);font-size:13px;letter-spacing:.06em;cursor:pointer}
+
+    /* ─── TOAST ─── */
+    #toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--surf2);border:1px solid var(--border);color:var(--parch);padding:11px 22px;border-radius:99px;font-size:13px;pointer-events:none;opacity:0;transition:opacity .3s,transform .3s;z-index:300;white-space:nowrap;max-width:90vw;text-align:center}
+    #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    #toast.ok{border-color:rgba(22,101,52,.5);color:#86efac}
+    #toast.err{border-color:rgba(153,27,27,.5);color:#fca5a5}
+
+    /* ─── SPINNER ─── */
+    .spin{width:18px;height:18px;border:2px solid rgba(13,9,0,.25);border-top-color:var(--ink);border-radius:50%;animation:rot .7s linear infinite;display:inline-block;vertical-align:middle}
+    @keyframes rot{to{transform:rotate(360deg)}}
+
+    /* ─── PRINT ─── */
+    #print-area{display:none}
+    @media print{
+      body>*:not(#print-area){display:none!important}
+      #print-area{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;min-height:100vh!important;background:white!important;gap:18px!important;padding:40px!important}
+      #pr-name{font-family:'Cinzel',serif!important;font-size:24pt!important;color:#1a1200!important;text-align:center!important;max-width:300px!important}
+      #pr-canvas{width:220px!important;height:220px!important}
+      #pr-sub{font-size:11pt!important;color:#666!important;text-align:center!important;font-family:serif!important}
+    }
+  </style>
+</head>
+<body>
+
+<!-- Print -->
+<div id="print-area">
+  <div id="pr-name"></div>
+  <canvas id="pr-canvas"></canvas>
+  <div id="pr-sub">Kula Kent Rehberi — QR Kodu Okutun</div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Confirm -->
+<div class="conf-ov" id="conf-ov">
+  <div class="conf-card">
+    <div class="conf-icon">🗑️</div>
+    <div class="conf-title">Eseri Sil</div>
+    <div class="conf-msg" id="conf-msg">Bu eseri silmek istediğinizden emin misiniz?</div>
+    <div class="conf-acts">
+      <button class="btn-no" onclick="closeConf()">Vazgeç</button>
+      <button class="btn-yes" id="conf-yes">Evet, Sil</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ LOGIN ═══ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <span class="login-emblem">⚜</span>
+      <h1>ADMİN PANELİ</h1>
+      <p>Kula Kent Rehberi</p>
+    </div>
+
+    <div class="fg">
+      <label class="fl" for="lu">Kullanıcı Adı</label>
+      <input type="text" id="lu" class="fi" placeholder="kullanıcı adınız"
+             autocomplete="username" autocapitalize="off" spellcheck="false" />
+    </div>
+
+    <div class="fg">
+      <label class="fl" for="lp">Şifre</label>
+      <div class="pw-wrap">
+        <input type="password" id="lp" class="fi" placeholder="••••••••" autocomplete="current-password" />
+        <button class="toggle-pw" type="button" onclick="togglePw()" title="Göster/Gizle">👁</button>
+      </div>
+    </div>
+
+    <button class="btn-login" id="login-btn" onclick="doLogin()">
+      <span>🔐</span> Giriş Yap
+    </button>
+
+    <div class="err-box" id="err-box">
+      <span>⚠️</span>
+      <span id="err-msg">Kullanıcı adı veya şifre hatalı.</span>
+    </div>
+
+    <div class="login-hint">Firebase bağlantısı olmadan da çalışır · Demo Mod</div>
+  </div>
+</div>
+
+<!-- ═══ ADMIN SHELL ═══ -->
+<div id="admin-shell">
+
+  <div id="demo-banner">
+    ⚡ Demo Mod aktif — Veriler bu oturumda saklanır. Firebase config eklenince kalıcı olur.
+  </div>
+
+  <div id="admin-header">
+    <div class="admin-logo">
+      <span class="em">⚜</span>
+      <div class="logo-txt">
+        <h1>KULA ADMİN</h1>
+        <p>Kent Rehberi Yönetimi</p>
+      </div>
+    </div>
+    <div class="hdr-right">
+      <div class="user-chip">
+        <div class="avatar" id="uavatar">H</div>
+        <span id="uname">Halo</span>
+      </div>
+      <button class="btn-logout" title="Çıkış Yap" onclick="doLogout()">🚪</button>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-num" id="s-tot">0</div><div class="stat-lbl">Toplam Eser</div></div>
+    <div class="stat-card"><div class="stat-num" id="s-cat">0</div><div class="stat-lbl">Kategori</div></div>
+    <div class="stat-card"><div class="stat-num" id="s-aud">0</div><div class="stat-lbl">Sesli Eser</div></div>
+    <div class="stat-card"><div class="stat-num" id="s-geo">0</div><div class="stat-lbl">Konumlu</div></div>
+  </div>
+
+  <div class="section">
+    <div class="sec-hdr">
+      <span class="sec-title">TARİHİ ESERLER</span>
+      <button class="btn-add" onclick="openModal(null)">＋ Yeni Eser</button>
+    </div>
+    <div class="place-list" id="place-list"></div>
+  </div>
+
+</div>
+
+<!-- ═══ PLACE MODAL ═══ -->
+<div class="mo" id="place-mo" onclick="ovClick(event,'place-mo')">
+  <div class="ms">
+    <div class="mhandle"></div>
+    <div class="mhdr">
+      <span class="mtitle" id="mo-title">Yeni Eser Ekle</span>
+      <button class="mclose" onclick="closeMo('place-mo')">✕</button>
+    </div>
+    <div class="mbody">
+      <input type="hidden" id="f-id" />
+
+      <div class="fg">
+        <label class="fl">Eser Adı *</label>
+        <input type="text" id="f-name" class="fi" placeholder="örn. Demircioğlu Konağı" />
+      </div>
+
+      <div class="frow">
+        <div class="fg">
+          <label class="fl">Kategori</label>
+          <select id="f-cat" class="fsel">
+            <option>Tarihi Eser</option><option>Osmanlı Konağı</option>
+            <option>Cami</option><option>Müze</option><option>Anıt</option>
+            <option>Hamam</option><option>Han</option><option>Köprü</option><option>Diğer</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label class="fl">Dönem</label>
+          <input type="text" id="f-period" class="fi" placeholder="18. Yüzyıl" />
+        </div>
+      </div>
+
+      <div class="fg">
+        <label class="fl">Emoji İkon</label>
+        <input type="text" id="f-icon" class="fi" placeholder="🏛️" maxlength="4" />
+      </div>
+
+      <div class="fg">
+        <label class="fl">Açıklama *</label>
+        <textarea id="f-desc" class="fta" placeholder="Eserin kısa açıklaması..."></textarea>
+      </div>
+
+      <div class="fg">
+        <label class="fl">Sesli Anlatım Metni</label>
+        <textarea id="f-audio" class="fta" style="min-height:110px" placeholder="Ziyaretçilere okunacak sesli rehber metni..."></textarea>
+      </div>
+
+      <div class="fg">
+        <label class="fl">Konum</label>
+        <button class="btn-gps" onclick="getGPS()">📍 Mevcut Konumumu Kullan</button>
+      </div>
+      <div class="frow">
+        <div class="fg">
+          <label class="fl">Enlem (Lat)</label>
+          <input type="number" id="f-lat" class="fi" placeholder="38.5455" step="0.00001" />
+        </div>
+        <div class="fg">
+          <label class="fl">Boylam (Lng)</label>
+          <input type="number" id="f-lng" class="fi" placeholder="28.6478" step="0.00001" />
+        </div>
+      </div>
+
+      <div class="fg">
+        <label class="fl">Fotoğraf</label>
+        <label class="photo-lbl" for="f-photo">
+          <input type="file" id="f-photo" accept="image/*" capture="environment" onchange="prevPhoto(this)" />
+          <img id="f-prev" class="photo-prev" alt="Önizleme" />
+          <div class="photo-hint">📷 <strong>Galeriden seç</strong> veya kamera ile çek<br/><small>JPG, PNG — Maks 5 MB</small></div>
+        </label>
+      </div>
+    </div>
+
+    <div class="mftr">
+      <button class="btn-cancel" onclick="closeMo('place-mo')">İptal</button>
+      <button class="btn-save" id="btn-save" onclick="savePlace()">💾 Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ QR MODAL ═══ -->
+<div class="mo" id="qr-mo" onclick="ovClick(event,'qr-mo')">
+  <div class="ms">
+    <div class="mhandle"></div>
+    <div class="mhdr">
+      <span class="mtitle">QR Kod Etiketi</span>
+      <button class="mclose" onclick="closeMo('qr-mo')">✕</button>
+    </div>
+    <div class="qr-body">
+      <canvas id="qr-canvas"></canvas>
+      <div class="qr-name" id="qr-name"></div>
+      <div class="qr-val"  id="qr-val"></div>
+      <p style="font-size:12px;color:rgba(245,237,214,.32);text-align:center;max-width:270px;line-height:1.6;">
+        Bu QR kodu yazdırıp eserin görünür bir yerine yapıştırın.
+      </p>
+      <button class="btn-print" onclick="printQR()">🖨️ Etiket Olarak Yazdır</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SCRIPT ═══ -->
+<script>
+// ─── KİMLİK BİLGİLERİ ───────────────────────
+const ADMIN_USER = 'Halo';
+const ADMIN_PASS = '13001300';
+const SK = 'kula_admin_ok';
+
+// ─── VERİ ───────────────────────────────────
+let places = [];
+let fbReady = false;
+let db = null, fbFns = null;
+let pendingDel = null;
+let currentQR = null;
+
+const SAMPLES = [
+  {id:'s1',name:'Demircioğlu Konağı',category:'Osmanlı Konağı',period:'18. Yüzyıl',
+   icon:'🏘️',description:'Kula\'nın en önemli Osmanlı dönemi sivil mimari örneklerinden biri. Cumbalı cephesi ve işlemeli ahşap detayları ile dikkat çeker.',
+   audioText:'Demircioğlu Konağı, 18. yüzyılda inşa edilmiştir. Cumbalı cephesi dönemin usta işçiliğini yansıtmaktadır.',
+   lat:38.5455,lng:28.6478,imageUrl:'',createdAt:new Date().toISOString()},
+  {id:'s2',name:'Kula Ulu Camii',category:'Cami',period:'14. Yüzyıl',
+   icon:'🕌',description:'Kula\'nın en eski ve büyük camii. Manisa Valiliği tarafından restore edilmiş tarihi yapı.',
+   audioText:'Kula Ulu Camii 14. yüzyılda inşa edilmiştir. Anadolu Selçuklu mimarisinin izlerini taşıyan bu yapı asırlardır ibadet merkezi olmuştur.',
+   lat:38.5465,lng:28.6490,imageUrl:'',createdAt:new Date().toISOString()},
+  {id:'s3',name:'Kula Müzesi',category:'Müze',period:'Cumhuriyet Dönemi',
+   icon:'🏛️',description:'Yöreye ait arkeolojik buluntuları ve etnografik eserleri barındıran müze.',
+   audioText:'Kula Müzesi bölgenin tarihsel zenginliğini gözler önüne seren kapsamlı bir koleksiyona sahiptir.',
+   lat:38.5448,lng:28.6465,imageUrl:'',createdAt:new Date().toISOString()}
+];
+
+// ─── FİREBASE (opsiyonel) ────────────────────
+async function tryFirebase() {
+  try {
+    const {initializeApp} = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
+    const fns = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    const sto = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js");
+
+    const cfg = {
+      apiKey:"YOUR_API_KEY",
+      authDomain:"YOUR_PROJECT_ID.firebaseapp.com",
+      projectId:"YOUR_PROJECT_ID",
+      storageBucket:"YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId:"YOUR_SENDER_ID",
+      appId:"YOUR_APP_ID"
+    };
+    if (cfg.apiKey === 'YOUR_API_KEY') throw new Error('not_configured');
+
+    const app2 = initializeApp(cfg);
+    db = fns.getFirestore(app2);
+    const storage = sto.getStorage(app2);
+    fbFns = {...fns, storage,
+      sref: sto.ref, upload: sto.uploadBytes, dlurl: sto.getDownloadURL};
+    fns.enableIndexedDbPersistence(db).catch(()=>{});
+    fbReady = true;
+    document.getElementById('demo-banner').classList.remove('show');
+  } catch(e) {
+    fbReady = false;
+    document.getElementById('demo-banner').classList.add('show');
+  }
+}
+
+function loadLocal() {
+  try { const r=localStorage.getItem('kula_places'); if(r) places=JSON.parse(r); } catch(_){}
+  if (!places.length) places = JSON.parse(JSON.stringify(SAMPLES));
+}
+function saveLocal() {
+  try { localStorage.setItem('kula_places', JSON.stringify(places)); } catch(_){}
+}
+
+async function fetchPlaces() {
+  if (fbReady) {
+    try {
+      const snap = await fbFns.getDocs(fbFns.collection(db,'places'));
+      places = snap.docs.map(d=>({id:d.id,...d.data()}));
+      return;
+    } catch(e){}
+  }
+  loadLocal();
+}
+
+async function dbCreate(data) {
+  if (fbReady) {
+    const ref = await fbFns.addDoc(fbFns.collection(db,'places'), data);
+    return ref.id;
+  }
+  const id = 'loc-' + Date.now();
+  places.push({id,...data});
+  saveLocal();
+  return id;
+}
+
+async function dbUpdate(id, data) {
+  if (fbReady) { await fbFns.updateDoc(fbFns.doc(db,'places',id), data); return; }
+  const i = places.findIndex(p=>p.id===id);
+  if (i>=0) { places[i]={...places[i],...data}; saveLocal(); }
+}
+
+async function dbDelete(id) {
+  if (fbReady) { await fbFns.deleteDoc(fbFns.doc(db,'places',id)); return; }
+  places = places.filter(p=>p.id!==id);
+  saveLocal();
+}
+
+async function uploadImg(file) {
+  if (fbReady && fbFns.storage) {
+    const r = fbFns.sref(fbFns.storage, `places/${Date.now()}_${file.name}`);
+    await fbFns.upload(r, file);
+    return await fbFns.dlurl(r);
+  }
+  return new Promise((res,rej)=>{
+    const rd=new FileReader();
+    rd.onload=e=>res(e.target.result);
+    rd.onerror=rej;
+    rd.readAsDataURL(file);
+  });
+}
+
+// ─── SESSION ─────────────────────────────────
+const isAuth = () => sessionStorage.getItem(SK)==='1';
+const setAuth = () => sessionStorage.setItem(SK,'1');
+const clearAuth = () => sessionStorage.removeItem(SK);
+
+// ─── LOGIN / LOGOUT ──────────────────────────
+window.doLogin = async () => {
+  const user = document.getElementById('lu').value.trim();
+  const pass = document.getElementById('lp').value;
+  const btn  = document.getElementById('login-btn');
+  const eb   = document.getElementById('err-box');
+  const em   = document.getElementById('err-msg');
+
+  eb.classList.remove('show');
+
+  if (!user || !pass) {
+    em.textContent = 'Lütfen kullanıcı adı ve şifrenizi girin.';
+    eb.classList.add('show');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> Kontrol ediliyor...';
+  await new Promise(r=>setTimeout(r,450));
+
+  if (user === ADMIN_USER && pass === ADMIN_PASS) {
+    setAuth();
+    enterAdmin();
+  } else {
+    em.textContent = 'Kullanıcı adı veya şifre hatalı.';
+    eb.classList.add('show');
+    btn.disabled = false;
+    btn.innerHTML = '<span>🔐</span> Giriş Yap';
+    document.getElementById('lp').value = '';
+    document.getElementById('lp').focus();
+  }
+};
+
+window.doLogout = () => {
+  clearAuth();
+  document.getElementById('admin-shell').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-btn').disabled = false;
+  document.getElementById('login-btn').innerHTML = '<span>🔐</span> Giriş Yap';
+  document.getElementById('lu').value = '';
+  document.getElementById('lp').value = '';
+};
+
+window.togglePw = () => {
+  const inp = document.getElementById('lp');
+  inp.type = inp.type==='password' ? 'text' : 'password';
+};
+
+document.getElementById('lp').addEventListener('keydown', e=>{if(e.key==='Enter') doLogin();});
+document.getElementById('lu').addEventListener('keydown', e=>{if(e.key==='Enter') document.getElementById('lp').focus();});
+
+// ─── ENTER ADMIN ─────────────────────────────
+async function enterAdmin() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('admin-shell').style.display = 'block';
+  await tryFirebase();
+  await fetchPlaces();
+  renderStats();
+  renderList();
+}
+
+// ─── STATS & LIST ────────────────────────────
+function renderStats() {
+  document.getElementById('s-tot').textContent = places.length;
+  document.getElementById('s-cat').textContent = new Set(places.map(p=>p.category).filter(Boolean)).size;
+  document.getElementById('s-aud').textContent = places.filter(p=>p.audioText).length;
+  document.getElementById('s-geo').textContent = places.filter(p=>p.lat&&p.lng).length;
+}
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function renderList() {
+  const el = document.getElementById('place-list');
+  if (!places.length) {
+    el.innerHTML = `<div class="empty"><span class="empty-icon">🏛️</span>Henüz eser eklenmemiş.<br/>Yukarıdaki "Yeni Eser" butonuna basın.</div>`;
+    return;
+  }
+  el.innerHTML = places.map(p=>`
+    <div class="pcard">
+      <div class="pcard-top">
+        <div class="pthumb">${p.imageUrl?`<img src="${esc(p.imageUrl)}" alt="${esc(p.name)}" />`:(p.icon||'🏛️')}</div>
+        <div class="pinfo">
+          <div class="pname">${esc(p.name)}</div>
+          <div class="pcat">${esc(p.category||'—')}${p.period?' · '+esc(p.period):''}</div>
+        </div>
+      </div>
+      <div class="pactions">
+        <button class="bsm bedit" onclick="openModal('${esc(p.id)}')">✏️ Düzenle</button>
+        <button class="bsm bqr"   onclick="showQR('${esc(p.id)}')">⬛ QR Üret</button>
+        <button class="bsm bdel"  onclick="confirmDel('${esc(p.id)}','${esc(p.name)}')">🗑️ Sil</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ─── PLACE MODAL ─────────────────────────────
+window.openModal = (id) => {
+  const p = id ? places.find(x=>x.id===id) : null;
+  document.getElementById('mo-title').textContent = p ? 'Eseri Düzenle' : 'Yeni Eser Ekle';
+  document.getElementById('f-id').value     = p?.id||'';
+  document.getElementById('f-name').value   = p?.name||'';
+  document.getElementById('f-cat').value    = p?.category||'Tarihi Eser';
+  document.getElementById('f-period').value = p?.period||'';
+  document.getElementById('f-icon').value   = p?.icon||'';
+  document.getElementById('f-desc').value   = p?.description||'';
+  document.getElementById('f-audio').value  = p?.audioText||'';
+  document.getElementById('f-lat').value    = p?.lat||'';
+  document.getElementById('f-lng').value    = p?.lng||'';
+  document.getElementById('f-photo').value  = '';
+  const prev = document.getElementById('f-prev');
+  if (p?.imageUrl) { prev.src=p.imageUrl; prev.classList.add('show'); }
+  else { prev.classList.remove('show'); prev.src=''; }
+  openMo('place-mo');
+  setTimeout(()=>document.getElementById('f-name').focus(),350);
+};
+
+window.closeMo = (id) => document.getElementById(id).classList.remove('open');
+
+window.prevPhoto = (inp) => {
+  const f=inp.files[0]; if(!f) return;
+  if (f.size>5*1024*1024) { showToast('Dosya 5 MB\'dan büyük olamaz','err'); inp.value=''; return; }
+  const r=new FileReader();
+  r.onload=e=>{const pv=document.getElementById('f-prev');pv.src=e.target.result;pv.classList.add('show');};
+  r.readAsDataURL(f);
+};
+
+window.getGPS = () => {
+  if (!navigator.geolocation) { showToast('Konum desteklenmiyor'); return; }
+  showToast('Konum alınıyor...');
+  navigator.geolocation.getCurrentPosition(
+    pos=>{
+      document.getElementById('f-lat').value = pos.coords.latitude.toFixed(6);
+      document.getElementById('f-lng').value = pos.coords.longitude.toFixed(6);
+      showToast('Konum alındı ✓','ok');
+    },
+    ()=>showToast('Konum alınamadı. İzin verin.','err'),
+    {enableHighAccuracy:true,timeout:8000}
+  );
+};
+
+window.savePlace = async () => {
+  const btn  = document.getElementById('btn-save');
+  const id   = document.getElementById('f-id').value;
+  const name = document.getElementById('f-name').value.trim();
+  const desc = document.getElementById('f-desc').value.trim();
+
+  if (!name) { showToast('Eser adı zorunludur','err'); document.getElementById('f-name').focus(); return; }
+  if (!desc) { showToast('Açıklama zorunludur','err'); document.getElementById('f-desc').focus(); return; }
+
+  btn.disabled=true;
+  btn.innerHTML='<span class="spin"></span> Kaydediliyor...';
+
+  try {
+    let imageUrl = id ? (places.find(p=>p.id===id)?.imageUrl||'') : '';
+    const pf = document.getElementById('f-photo').files[0];
+    if (pf) imageUrl = await uploadImg(pf);
+
+    const data = {
+      name, imageUrl,
+      category:  document.getElementById('f-cat').value,
+      period:    document.getElementById('f-period').value.trim(),
+      icon:      document.getElementById('f-icon').value.trim()||'🏛️',
+      description: desc,
+      audioText: document.getElementById('f-audio').value.trim(),
+      lat:       parseFloat(document.getElementById('f-lat').value)||null,
+      lng:       parseFloat(document.getElementById('f-lng').value)||null,
+      updatedAt: new Date().toISOString()
+    };
+
+    if (id) {
+      await dbUpdate(id, data);
+      const i=places.findIndex(p=>p.id===id);
+      if (i>=0) places[i]={...places[i],...data};
+      showToast('Eser güncellendi ✓','ok');
+    } else {
+      data.createdAt=new Date().toISOString();
+      const nid=await dbCreate(data);
+      if (!places.find(p=>p.id===nid)) places.push({id:nid,...data});
+      showToast('Eser eklendi ✓','ok');
+    }
+
+    closeMo('place-mo');
+    renderStats();
+    renderList();
+  } catch(e) {
+    showToast('Kayıt hatası: '+e.message,'err');
+  } finally {
+    btn.disabled=false;
+    btn.textContent='💾 Kaydet';
+  }
+};
+
+// ─── SİL ─────────────────────────────────────
+window.confirmDel = (id, name) => {
+  pendingDel = id;
+  document.getElementById('conf-msg').textContent = `"${name}" eserini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`;
+  document.getElementById('conf-ov').classList.add('open');
+};
+window.closeConf = () => { pendingDel=null; document.getElementById('conf-ov').classList.remove('open'); };
+document.getElementById('conf-yes').onclick = async () => {
+  if (!pendingDel) return;
+  try {
+    await dbDelete(pendingDel);
+    places=places.filter(p=>p.id!==pendingDel);
+    showToast('Eser silindi','ok');
+    renderStats(); renderList();
+  } catch(e) { showToast('Silme hatası','err'); }
+  closeConf();
+};
+
+// ─── QR ──────────────────────────────────────
+window.showQR = async (id) => {
+  const p = places.find(x=>x.id===id);
+  if (!p) return;
+  currentQR = p;
+  const val = `kula-place:${id}`;
+  try {
+    await QRCode.toCanvas(document.getElementById('qr-canvas'), val, {
+      width:230, margin:2,
+      color:{dark:'#1a1200',light:'#ffffff'},
+      errorCorrectionLevel:'H'
+    });
+    document.getElementById('qr-name').textContent = p.name;
+    document.getElementById('qr-val').textContent  = val;
+    openMo('qr-mo');
+  } catch(e) { showToast('QR üretilemedi','err'); }
+};
+
+window.printQR = () => {
+  if (!currentQR) return;
+  const src=document.getElementById('qr-canvas');
+  const dst=document.getElementById('pr-canvas');
+  dst.width=src.width; dst.height=src.height;
+  dst.getContext('2d').drawImage(src,0,0);
+  document.getElementById('pr-name').textContent = currentQR.name;
+  window.print();
+};
+
+// ─── HELPERS ─────────────────────────────────
+function openMo(id) { document.getElementById(id).classList.add('open'); }
+window.ovClick = (e,id) => { if(e.target.id===id) closeMo(id); };
+
+let toastT;
+function showToast(msg, type='') {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='show '+(type==='ok'?'ok':type==='err'?'err':'');
+  clearTimeout(toastT);
+  toastT=setTimeout(()=>{t.className='';},3500);
+}
+
+// ─── BOOT ────────────────────────────────────
+if (isAuth()) {
+  document.getElementById('login-screen').style.display='none';
+  enterAdmin();
+}
+</script>
+</body>
+</html>

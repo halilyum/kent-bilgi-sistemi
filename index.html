@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#1a1200" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Kula Kent Rehberi</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Noto+Serif+TR:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- QR Tarayıcı -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold:    #c9a84c;
+      --gold-l:  #e8c97a;
+      --gold-d:  #8b6914;
+      --ink:     #1a1200;
+      --ink2:    #0d0900;
+      --parch:   #f5edd6;
+      --parch2:  #ede0be;
+      --rust:    #9b3a1a;
+      --sky:     #2563eb;
+      --surf:    rgba(13,9,0,0.93);
+      --r:       16px;
+      --rs:      10px;
+      --shadow:  0 4px 24px rgba(0,0,0,0.5);
+      --fh:      'Cinzel', serif;
+      --fb:      'Noto Serif TR', serif;
+      --safe-b:  env(safe-area-inset-bottom, 0px);
+      --safe-t:  env(safe-area-inset-top, 0px);
+    }
+
+    html, body {
+      height: 100%; overflow: hidden;
+      background: var(--ink2); color: var(--parch);
+      font-family: var(--fb);
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior: none;
+    }
+
+    /* ── APP SHELL ── */
+    #app {
+      display: flex; flex-direction: column;
+      height: 100dvh; height: 100vh;
+      position: relative; overflow: hidden;
+    }
+
+    /* ── HEADER ── */
+    #header {
+      position: absolute; top: 0; left: 0; right: 0;
+      z-index: 40; pointer-events: none;
+      padding: calc(14px + var(--safe-t)) 18px 40px;
+      background: linear-gradient(180deg, rgba(13,9,0,0.85) 0%, transparent 100%);
+    }
+    .logo-wrap { display: flex; align-items: center; gap: 10px; pointer-events: all; }
+    .logo-badge {
+      width: 40px; height: 40px; border: 2px solid var(--gold);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 18px; color: var(--gold); flex-shrink: 0;
+      background: rgba(13,9,0,0.6);
+    }
+    .logo-text h1 { font-family: var(--fh); font-size: 14px; letter-spacing: .08em; color: var(--gold-l); line-height: 1.1; }
+    .logo-text p  { font-size: 10px; color: var(--parch2); letter-spacing: .12em; opacity: .65; }
+
+    /* ── MAP ── */
+    #map-wrap { flex: 1; position: relative; }
+    #map      { width: 100%; height: 100%; }
+
+    /* Leaflet overrides */
+    .leaflet-control-attribution { display: none !important; }
+    .leaflet-control-zoom {
+      border: none !important;
+      box-shadow: var(--shadow) !important;
+    }
+    .leaflet-control-zoom a {
+      background: rgba(13,9,0,0.85) !important;
+      color: var(--gold) !important;
+      border: 1px solid rgba(201,168,76,0.3) !important;
+      font-size: 16px !important;
+      line-height: 28px !important;
+      width: 32px !important; height: 32px !important;
+    }
+    .leaflet-control-zoom a:hover { background: rgba(201,168,76,0.15) !important; }
+    .leaflet-control-zoom-in  { border-bottom: none !important; border-radius: 8px 8px 0 0 !important; }
+    .leaflet-control-zoom-out { border-radius: 0 0 8px 8px !important; }
+
+    /* Custom marker */
+    .k-pin {
+      width: 36px; height: 36px;
+      background: var(--gold); border: 3px solid var(--ink2);
+      border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+      box-shadow: 0 3px 10px rgba(0,0,0,0.55);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: transform .15s;
+    }
+    .k-pin:active { transform: rotate(-45deg) scale(.9); }
+    .k-pin-inner  { transform: rotate(45deg); font-size: 14px; line-height: 1; }
+
+    /* Leaflet popup */
+    .leaflet-popup-content-wrapper {
+      background: var(--ink2) !important;
+      border: 1px solid var(--gold-d) !important;
+      border-radius: 12px !important;
+      box-shadow: var(--shadow) !important;
+      padding: 0 !important;
+      color: var(--parch) !important;
+    }
+    .leaflet-popup-tip-container { display: none !important; }
+    .leaflet-popup-content { margin: 0 !important; }
+    .leaflet-popup-close-button {
+      color: var(--gold) !important; font-size: 18px !important;
+      top: 8px !important; right: 10px !important;
+    }
+    .pop-body { padding: 14px 16px; min-width: 190px; }
+    .pop-name { font-family: var(--fh); font-size: 13px; color: var(--gold-l); margin-bottom: 4px; }
+    .pop-cat  { font-size: 11px; color: rgba(245,237,214,.5); margin-bottom: 10px; }
+    .pop-btn  {
+      display: block; width: 100%; background: var(--gold); color: var(--ink);
+      border: none; border-radius: 8px; padding: 10px;
+      font-family: var(--fh); font-size: 12px; letter-spacing: .06em;
+      cursor: pointer; text-align: center;
+    }
+    .pop-btn:active { opacity: .85; }
+
+    /* User dot */
+    .u-dot {
+      width: 18px; height: 18px;
+      background: var(--sky); border: 3px solid white; border-radius: 50%;
+      box-shadow: 0 0 0 6px rgba(37,99,235,.25);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%,100% { box-shadow: 0 0 0 6px rgba(37,99,235,.25); }
+      50%      { box-shadow: 0 0 0 14px rgba(37,99,235,.07); }
+    }
+
+    /* ── FABs ── */
+    .fabs {
+      position: absolute; right: 14px; bottom: 90px;
+      display: flex; flex-direction: column; gap: 10px; z-index: 20;
+    }
+    .fab {
+      width: 52px; height: 52px; border-radius: 50%; border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: 22px;
+      box-shadow: var(--shadow); transition: transform .15s;
+    }
+    .fab:active { transform: scale(.91); }
+    .fab-loc { background: rgba(13,9,0,0.9); border: 2px solid var(--gold); color: var(--gold); }
+    .fab-qr  { background: var(--gold); color: var(--ink); }
+
+    /* ── BOTTOM NAV ── */
+    #nav {
+      flex-shrink: 0; display: flex;
+      background: var(--surf); border-top: 1px solid rgba(201,168,76,.2);
+      padding-bottom: var(--safe-b);
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      position: relative; z-index: 40;
+    }
+    .nav-btn {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 3px; padding: 10px 4px 8px;
+      background: none; border: none; cursor: pointer;
+      color: rgba(245,237,214,.35); font-family: var(--fb);
+      font-size: 10px; letter-spacing: .05em; min-height: 60px;
+      transition: color .2s;
+    }
+    .nav-btn .ni { font-size: 22px; line-height: 1; }
+    .nav-btn.active { color: var(--gold); }
+    .nav-btn:active { opacity: .7; }
+
+    /* ── PANELS ── */
+    .panel {
+      position: fixed; inset: 0; z-index: 60;
+      background: var(--ink); display: flex; flex-direction: column;
+      transform: translateX(100%);
+      transition: transform .28s cubic-bezier(.32,.72,0,1);
+      will-change: transform;
+    }
+    .panel.open { transform: translateX(0); }
+    /* Stack sırası: her açılan panel bir üste çıkar */
+    .panel.z1 { z-index: 61; }
+    .panel.z2 { z-index: 62; }
+    .panel.z3 { z-index: 63; }
+
+    .ph {
+      display: flex; align-items: center; gap: 12px;
+      padding: calc(16px + var(--safe-t)) 18px 12px;
+      border-bottom: 1px solid rgba(201,168,76,.15);
+      flex-shrink: 0; background: var(--ink);
+    }
+    .ph-back {
+      width: 44px; height: 44px; border-radius: 50%;
+      border: 1.5px solid rgba(201,168,76,.3); background: transparent;
+      color: var(--gold); font-size: 20px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .ph-title { font-family: var(--fh); font-size: 16px; color: var(--gold-l); letter-spacing: .06em; }
+
+    .pb { flex: 1; overflow-y: auto; padding: 16px 18px; overscroll-behavior: contain; }
+
+    /* ── LIST ── */
+    .search-wrap { padding: 12px 18px; flex-shrink: 0; background: var(--ink); }
+    .search-inp {
+      width: 100%; background: rgba(245,237,214,.05);
+      border: 1px solid rgba(201,168,76,.2); border-radius: 99px;
+      padding: 12px 18px; color: var(--parch); font-family: var(--fb);
+      font-size: 15px; outline: none;
+    }
+    .search-inp::placeholder { color: rgba(245,237,214,.28); }
+    .search-inp:focus { border-color: var(--gold-d); }
+
+    .place-grid { display: grid; gap: 12px; }
+    .place-card {
+      background: rgba(245,237,214,.04); border: 1px solid rgba(201,168,76,.13);
+      border-radius: var(--r); padding: 14px;
+      display: flex; gap: 14px; align-items: flex-start; cursor: pointer;
+      width: 100%; text-align: left; font: inherit; color: inherit;
+      transition: background .15s, border-color .15s;
+    }
+    .place-card:active { background: rgba(201,168,76,.08); border-color: var(--gold-d); }
+    .pthumb {
+      width: 72px; height: 72px; border-radius: var(--rs); flex-shrink: 0;
+      background: rgba(201,168,76,.07); border: 1px solid rgba(201,168,76,.14);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; overflow: hidden;
+    }
+    .pthumb img { width: 100%; height: 100%; object-fit: cover; }
+    .pinfo h3  { font-family: var(--fh); font-size: 13px; color: var(--gold-l); margin-bottom: 4px; }
+    .pinfo p   { font-size: 12px; color: rgba(245,237,214,.52); line-height: 1.5;
+                 display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .pbadge    { font-size: 10px; padding: 3px 8px; background: rgba(201,168,76,.09);
+                 border: 1px solid rgba(201,168,76,.2); border-radius: 99px;
+                 color: var(--gold); display: inline-block; margin-top: 6px; }
+
+    /* ── DETAIL ── */
+    #detail-panel .pb { padding: 0; }
+    .d-hero    { width: 100%; height: 220px; object-fit: cover; display: block; background: rgba(201,168,76,.05); }
+    .d-hero-ph { width: 100%; height: 220px;
+                 background: linear-gradient(135deg,rgba(201,168,76,.1),rgba(201,168,76,.03));
+                 display: flex; align-items: center; justify-content: center; font-size: 64px; }
+    .d-content { padding: 20px 18px 120px; }
+    .d-title   { font-family: var(--fh); font-size: 21px; color: var(--gold-l); letter-spacing: .04em; margin-bottom: 6px; }
+    .d-meta    { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    .d-tag     { font-size: 11px; padding: 4px 10px; background: rgba(201,168,76,.09);
+                 border: 1px solid rgba(201,168,76,.2); border-radius: 99px; color: var(--gold); }
+    .d-desc    { font-size: 15px; line-height: 1.8; color: var(--parch2); margin-bottom: 24px; }
+    .d-acts    { display: flex; gap: 10px; }
+    .d-btn     {
+      flex: 1; min-height: 52px; border-radius: var(--rs); border: none; cursor: pointer;
+      font-family: var(--fh); font-size: 12px; letter-spacing: .06em;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      transition: opacity .15s, transform .15s;
+    }
+    .d-btn:active { transform: scale(.96); opacity: .85; }
+    .d-nav   { background: var(--sky); color: white; }
+    .d-audio { background: var(--gold); color: var(--ink); }
+
+    /* ── QR ── */
+    .qr-wrap { display: flex; flex-direction: column; align-items: center; padding: 24px 18px; gap: 20px; }
+    .qr-box  {
+      position: relative; width: min(75vw, 280px); height: min(75vw, 280px);
+      border-radius: 18px; overflow: hidden; background: #000;
+    }
+    .qr-corner { position: absolute; width: 26px; height: 26px; border-color: var(--gold); border-style: solid; border-width: 0; }
+    .qr-corner.tl { top:0;left:0;   border-top-width:4px; border-left-width:4px;  border-top-left-radius:8px; }
+    .qr-corner.tr { top:0;right:0;  border-top-width:4px; border-right-width:4px; border-top-right-radius:8px; }
+    .qr-corner.bl { bottom:0;left:0;  border-bottom-width:4px; border-left-width:4px;  border-bottom-left-radius:8px; }
+    .qr-corner.br { bottom:0;right:0; border-bottom-width:4px; border-right-width:4px; border-bottom-right-radius:8px; }
+    .qr-line {
+      position: absolute; left: 8px; right: 8px; height: 2px;
+      background: var(--gold); border-radius: 1px; box-shadow: 0 0 8px var(--gold);
+      animation: scan 2s ease-in-out infinite;
+    }
+    @keyframes scan { 0%{top:8px;opacity:1} 95%{top:calc(100% - 10px);opacity:1} 100%{top:8px;opacity:0} }
+    .qr-hint { font-size: 13px; color: rgba(245,237,214,.52); text-align: center; line-height: 1.6; max-width: 280px; }
+
+    /* ── AUDIO BAR ── */
+    #audio-bar {
+      position: fixed; bottom: calc(60px + var(--safe-b)); left: 0; right: 0; z-index: 80;
+      background: var(--surf); border-top: 1px solid rgba(201,168,76,.3);
+      padding: 10px 16px; display: none; align-items: center; gap: 12px;
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      animation: slideup .3s ease;
+    }
+    #audio-bar.on { display: flex; }
+    @keyframes slideup { from{transform:translateY(100%);opacity:0} to{transform:translateY(0);opacity:1} }
+    .ab-thumb  { width:44px;height:44px;border-radius:8px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0; }
+    .ab-info   { flex:1;min-width:0; }
+    .ab-title  { font-size:13px;font-weight:600;color:var(--gold-l);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+    .ab-status { font-size:11px;color:rgba(245,237,214,.42);margin-top:2px; }
+    .ab-prog   { height:3px;background:rgba(201,168,76,.14);border-radius:2px;margin-top:5px;overflow:hidden; }
+    .ab-fill   { height:100%;background:var(--gold);border-radius:2px;width:0%;transition:width .3s linear; }
+    .ab-btns   { display:flex;gap:6px; }
+    .ab-btn    { width:44px;height:44px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;transition:transform .15s; }
+    .ab-btn:active { transform:scale(.9); }
+    .ab-play   { background:var(--gold);color:var(--ink); }
+    .ab-close  { background:rgba(245,237,214,.07);color:var(--parch2);font-size:14px; }
+
+    /* ── INFO ── */
+    .info-sec    { margin-bottom: 24px; }
+    .info-sec h3 { font-family:var(--fh);font-size:13px;color:var(--gold);letter-spacing:.08em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid rgba(201,168,76,.14); }
+    .irow { display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid rgba(245,237,214,.04);font-size:14px;color:var(--parch2);line-height:1.5; }
+    .irow .ic { font-size:18px;flex-shrink:0;width:24px;text-align:center; }
+
+    /* ── OFFLINE ── */
+    #offline { position:fixed;top:0;left:0;right:0;z-index:200;background:var(--rust);color:white;text-align:center;font-size:13px;padding:10px 16px;display:none;gap:8px;align-items:center;justify-content:center; }
+    #offline.on { display:flex; }
+
+    /* ── TOAST ── */
+    #toast { position:fixed;bottom:calc(140px + var(--safe-b));left:50%;transform:translateX(-50%) translateY(16px);background:rgba(13,9,0,.95);border:1px solid rgba(201,168,76,.28);color:var(--parch);padding:10px 20px;border-radius:99px;font-size:13px;pointer-events:none;opacity:0;transition:opacity .3s,transform .3s;white-space:nowrap;z-index:150;max-width:88vw;text-align:center; }
+    #toast.on { opacity:1;transform:translateX(-50%) translateY(0); }
+
+    /* ── LOADER ── */
+    #loader { position:fixed;inset:0;background:var(--ink2);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:300;gap:24px;transition:opacity .5s; }
+    #loader.gone { opacity:0;pointer-events:none; }
+    .ld-ring { width:72px;height:72px;border:3px solid rgba(201,168,76,.18);border-top-color:var(--gold);border-radius:50%;animation:spin 1s linear infinite; }
+    .ld-txt  { font-family:var(--fh);font-size:18px;color:var(--gold);letter-spacing:.1em; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+
+    ::-webkit-scrollbar { width:4px; }
+    ::-webkit-scrollbar-thumb { background:rgba(201,168,76,.2);border-radius:2px; }
+  </style>
+</head>
+<body>
+
+<div id="offline"><span>📡</span><span>İnternet bağlantınızı kontrol edin.</span></div>
+<div id="loader"><div class="ld-ring"></div><div class="ld-txt">KULA KENT REHBERİ</div></div>
+<div id="toast"></div>
+
+<!-- AUDIO BAR -->
+<div id="audio-bar">
+  <div class="ab-thumb" id="ab-thumb">🏛️</div>
+  <div class="ab-info">
+    <div class="ab-title"  id="ab-title">—</div>
+    <div class="ab-status" id="ab-status">Hazır</div>
+    <div class="ab-prog"><div class="ab-fill" id="ab-fill"></div></div>
+  </div>
+  <div class="ab-btns">
+    <button class="ab-btn ab-play"  id="ab-play"  onclick="toggleAudio()" aria-label="Sesli rehberi oynat veya duraklat">▶</button>
+    <button class="ab-btn ab-close" onclick="closeAudio()" aria-label="Sesli rehberi kapat">✕</button>
+  </div>
+</div>
+
+<div id="app">
+  <!-- HEADER -->
+  <div id="header">
+    <div class="logo-wrap">
+      <div class="logo-badge">⚜</div>
+      <div class="logo-text">
+        <h1>KULA KENT REHBERİ</h1>
+        <p>TARİHİ KENTLER PROJESİ</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAP -->
+  <div id="map-wrap">
+    <div id="map"></div>
+    <div class="fabs">
+      <button class="fab fab-loc" onclick="locateMe()" aria-label="Konumumu goster">📍</button>
+      <button class="fab fab-qr"  onclick="openPanel('qr')" aria-label="QR kod tara">⬛</button>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav id="nav">
+    <button class="nav-btn active" id="nb-map"  type="button" onclick="goTab('map')">
+      <span class="ni">🗺️</span><span>Harita</span>
+    </button>
+    <button class="nav-btn" id="nb-list" type="button" onclick="goTab('list')">
+      <span class="ni">📜</span><span>Eserler</span>
+    </button>
+    <button class="nav-btn" id="nb-qr" type="button" onclick="openPanel('qr')">
+      <span class="ni">⬛</span><span>QR Tara</span>
+    </button>
+    <button class="nav-btn" id="nb-info" type="button" onclick="goTab('info')">
+      <span class="ni">ℹ️</span><span>Rehber</span>
+    </button>
+  </nav>
+</div>
+
+<!-- PANELS -->
+<div id="list-panel" class="panel">
+  <div class="ph">
+    <button class="ph-back" onclick="closePanel('list')">←</button>
+    <span class="ph-title">Tarihi Eserler</span>
+  </div>
+  <div class="search-wrap">
+    <input type="search" class="search-inp" id="search" placeholder="Eser veya yer ara…" oninput="filterPlaces(this.value)" />
+  </div>
+  <div class="pb"><div class="place-grid" id="place-grid"></div></div>
+</div>
+
+<div id="detail-panel" class="panel">
+  <div class="ph">
+    <button class="ph-back" onclick="closeDetail()">←</button>
+    <span class="ph-title" id="d-panel-title">Detay</span>
+  </div>
+  <div class="pb" style="padding:0">
+    <div id="d-hero-wrap"></div>
+    <div class="d-content">
+      <h2 class="d-title" id="d-title"></h2>
+      <div class="d-meta"  id="d-meta"></div>
+      <p   class="d-desc"  id="d-desc"></p>
+      <div class="d-acts"  id="d-acts"></div>
+    </div>
+  </div>
+</div>
+
+<div id="qr-panel" class="panel">
+  <div class="ph">
+    <button class="ph-back" onclick="stopQR()">←</button>
+    <span class="ph-title">QR Kod Tara</span>
+  </div>
+  <div class="qr-wrap">
+    <div class="qr-box" id="qr-reader">
+      <div class="qr-corner tl"></div><div class="qr-corner tr"></div>
+      <div class="qr-corner bl"></div><div class="qr-corner br"></div>
+      <div class="qr-line"></div>
+    </div>
+    <p class="qr-hint">Tarihi eserin yanındaki QR kodu kameranıza doğrultun. Otomatik tanıma yapılır.</p>
+  </div>
+</div>
+
+<div id="info-panel" class="panel">
+  <div class="ph">
+    <button class="ph-back" onclick="closePanel('info')">←</button>
+    <span class="ph-title">Rehber Bilgisi</span>
+  </div>
+  <div class="pb">
+    <div class="info-sec">
+      <h3>KULA HAKKINDA</h3>
+      <div class="irow"><span class="ic">🏛️</span><span>Kula, Manisa iline bağlı, Osmanlı dönemi sivil mimarisiyle ünlü tarihi bir ilçedir.</span></div>
+      <div class="irow"><span class="ic">📍</span><span>Manisa İli, Ege Bölgesi, Türkiye</span></div>
+      <div class="irow"><span class="ic">🕐</span><span>Müzeler genellikle 09:00–17:00 açıktır.</span></div>
+    </div>
+    <div class="info-sec">
+      <h3>NASIL KULLANILIR</h3>
+      <div class="irow"><span class="ic">⬛</span><span>Eserin yanındaki QR kodu tarayın — sesli anlatım otomatik açılır.</span></div>
+      <div class="irow"><span class="ic">📍</span><span>Haritada mavi nokta ile kendi konumunuzu görün.</span></div>
+      <div class="irow"><span class="ic">🧭</span><span>"Navigasyon" butonuna basınca Google Maps yol tarifi başlar.</span></div>
+      <div class="irow"><span class="ic">🔊</span><span>Sesli rehber çalarken sayfayı gezseniz de alt bar görünür kalır.</span></div>
+    </div>
+    <div class="info-sec">
+      <h3>İLETİŞİM</h3>
+      <div class="irow"><span class="ic">🌐</span><span>kula.bel.tr</span></div>
+      <div class="irow"><span class="ic">📞</span><span>+90 236 816 00 00</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════
+   ÖRNEK VERİ
+══════════════════════════════════════════ */
+var SAMPLES = [
+  { id:'demircioglu', name:'Demircioğlu Konağı', category:'Osmanlı Konağı', period:'18. Yüzyıl',
+    icon:'🏘️', description:'Kula\'nın en önemli Osmanlı dönemi sivil mimari örneklerinden biri. Cumbalı cephesi ve işlemeli ahşap detayları ile dikkat çeker.',
+    audioText:'Demircioğlu Konağı, 18. yüzyılda inşa edilmiştir. Cumbalı cephesi dönemin usta işçiliğini yansıtmaktadır.',
+    lat:38.5455, lng:28.6478, imageUrl:'' },
+  { id:'ulu-cami', name:'Kula Ulu Camii', category:'Cami', period:'14. Yüzyıl',
+    icon:'🕌', description:'Kula\'nın en eski ve büyük camii. Manisa Valiliği tarafından restore edilmiş tarihi yapı.',
+    audioText:'Kula Ulu Camii 14. yüzyılda inşa edilmiştir. Anadolu Selçuklu mimarisinin izlerini taşıyan bu yapı asırlardır ibadet merkezi olmuştur.',
+    lat:38.5465, lng:28.6490, imageUrl:'' },
+  { id:'muzesi', name:'Kula Müzesi', category:'Müze', period:'Cumhuriyet Dönemi',
+    icon:'🏛️', description:'Yöreye ait arkeolojik buluntuları ve etnografik eserleri barındıran müze.',
+    audioText:'Kula Müzesi bölgenin binlerce yıllık tarihsel zenginliğini gözler önüne seren kapsamlı bir koleksiyona sahiptir.',
+    lat:38.5448, lng:28.6465, imageUrl:'' },
+  { id:'saat-kulesi', name:'Kula Saat Kulesi', category:'Anıt', period:'19. Yüzyıl',
+    icon:'🕰️', description:'Osmanlı dönemine ait saat kulesi, ilçenin simgelerinden biridir.',
+    audioText:'Kula Saat Kulesi 19. yüzyılda inşa edilmiştir. Osmanlı kentsel mimarisinin karakteristik bir unsuru olarak günümüze ulaşmıştır.',
+    lat:38.5470, lng:28.6484, imageUrl:'' }
+];
+
+/* ══════════════════════════════════════════
+   STATE
+══════════════════════════════════════════ */
+var gmap       = null;
+var userMarker = null;
+var places     = [];
+var activePlace= null;
+var qrScanner  = null;
+var qrRunning  = false;
+var openPanels = [];
+var synth      = window.speechSynthesis;
+var utter      = null;
+var speaking   = false;
+var paused     = false;
+
+/* ══════════════════════════════════════════
+   OFFLINE
+══════════════════════════════════════════ */
+function checkOnline() {
+  document.getElementById('offline').classList.toggle('on', !navigator.onLine);
+}
+window.addEventListener('online',  checkOnline);
+window.addEventListener('offline', checkOnline);
+checkOnline();
+
+/* ══════════════════════════════════════════
+   HARİTA — Leaflet + Google Maps Tile
+   API key GEREKMİYOR
+   (Satellite görünüm için Google'ın
+    kamuya açık tile sunucusu kullanılır)
+══════════════════════════════════════════ */
+function buildMap() {
+  gmap = L.map('map', {
+    center: [38.545, 28.647],
+    zoom: 15,
+    zoomControl: true,
+    attributionControl: false,
+    gestureHandling: false  // Leaflet kendi dokunma işleyicisini kullanır
+  });
+
+  /* Google Maps Hybrid tile — API key gerektirmez */
+  L.tileLayer(
+    'https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}&hl=tr',
+    {
+      subdomains: ['0','1','2','3'],
+      maxZoom: 20,
+      tileSize: 256,
+    }
+  ).addTo(gmap);
+
+  /* Zoom kontrolünü sağ-alta taşı (FAB'ların üstüne çakışmasın) */
+  gmap.zoomControl.setPosition('bottomright');
+
+  /* Harita boyutu değişince yenile */
+  setTimeout(function() { gmap.invalidateSize(); }, 100);
+}
+
+/* ══════════════════════════════════════════
+   VERİ YÜKLEME
+══════════════════════════════════════════ */
+async function loadPlaces() {
+  /* Firebase bağlantısı varsa oradan al */
+  try {
+    var cfg = {
+      apiKey:            'YOUR_FIREBASE_API_KEY',
+      authDomain:        'YOUR_PROJECT_ID.firebaseapp.com',
+      projectId:         'YOUR_PROJECT_ID',
+      storageBucket:     'YOUR_PROJECT_ID.appspot.com',
+      messagingSenderId: 'YOUR_SENDER_ID',
+      appId:             'YOUR_APP_ID'
+    };
+    if (cfg.apiKey !== 'YOUR_FIREBASE_API_KEY') {
+      var { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
+      var { getFirestore, collection, getDocs, enableIndexedDbPersistence } =
+            await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+      var fbApp = initializeApp(cfg);
+      var db    = getFirestore(fbApp);
+      enableIndexedDbPersistence(db).catch(function(){});
+      var snap  = await getDocs(collection(db, 'places'));
+      places = [];
+      snap.forEach(function(d) { places.push(Object.assign({ id: d.id }, d.data())); });
+      /* Önbelleğe al */
+      try { localStorage.setItem('kula_places_cache', JSON.stringify(places)); } catch(e){}
+      return;
+    }
+  } catch(e) {}
+
+  /* Önbellek */
+  try {
+    var raw = localStorage.getItem('kula_places_cache');
+    if (raw) { places = JSON.parse(raw); return; }
+  } catch(e) {}
+
+  /* Örnek veri */
+  places = SAMPLES;
+}
+
+/* ══════════════════════════════════════════
+   MARKERlar
+══════════════════════════════════════════ */
+function addMarkers() {
+  places.forEach(function(p) {
+    if (!p.lat || !p.lng) return;
+
+    var el = document.createElement('div');
+    el.className = 'k-pin';
+    el.innerHTML = '<div class="k-pin-inner">' + (p.icon || '🏛️') + '</div>';
+
+    var icon = L.divIcon({
+      className: '',
+      html: el.outerHTML,
+      iconSize:   [36, 36],
+      iconAnchor: [18, 36],
+      popupAnchor:[0, -36]
+    });
+
+    var popHtml = '<div class="pop-body">'
+      + '<div class="pop-name">' + esc(p.name) + '</div>'
+      + '<div class="pop-cat">'  + esc(p.category || '') + (p.period ? ' · ' + esc(p.period) : '') + '</div>'
+      + '<button class="pop-btn" type="button" aria-label="Detaylari gor" onclick="openDetailById(\'' + escJsStr(p.id) + '\')">Detayları Gör →</button>'
+      + '</div>';
+
+    L.marker([p.lat, p.lng], { icon: icon })
+      .addTo(gmap)
+      .bindPopup(popHtml, { closeButton: true, maxWidth: 260 });
+  });
+}
+
+/* ══════════════════════════════════════════
+   LISTE
+══════════════════════════════════════════ */
+function renderList(list) {
+  var grid = document.getElementById('place-grid');
+  if (!list.length) {
+    grid.innerHTML = '<p style="color:rgba(245,237,214,.3);font-size:14px;text-align:center;padding:32px 0">Sonuç bulunamadı.</p>';
+    return;
+  }
+  grid.innerHTML = list.map(function(p) {
+    return '<button class="place-card" type="button" aria-label="' + esc(p.name) + ' detaylarini ac" onclick="openDetailById(\'' + escJsStr(p.id) + '\')">'
+      + (p.imageUrl
+          ? '<div class="pthumb"><img src="' + esc(p.imageUrl) + '" alt="' + esc(p.name) + '" loading="lazy"></div>'
+          : '<div class="pthumb">' + (p.icon || '🏛️') + '</div>')
+      + '<div class="pinfo"><h3>' + esc(p.name) + '</h3><p>' + esc(p.description || '') + '</p>'
+      + '<span class="pbadge">' + esc(p.category || 'Tarihi Eser') + '</span></div></button>';
+  }).join('');
+}
+
+window.filterPlaces = function(q) {
+  var t = q.toLowerCase();
+  renderList(places.filter(function(p) {
+    return (p.name||'').toLowerCase().includes(t)
+        || (p.description||'').toLowerCase().includes(t)
+        || (p.category||'').toLowerCase().includes(t);
+  }));
+};
+
+window.openDetailById = function(id) {
+  var p = places.find(function(x) { return x.id === id; });
+  if (p) openDetail(p);
+};
+
+/* ══════════════════════════════════════════
+   DETAY
+══════════════════════════════════════════ */
+function openDetail(place) {
+  activePlace = place;
+
+  /* İçerikleri doldur */
+  document.getElementById('d-panel-title').textContent = place.name;
+  document.getElementById('d-title').textContent       = place.name;
+  document.getElementById('d-desc').textContent        = place.description || '';
+
+  var hw = document.getElementById('d-hero-wrap');
+  hw.innerHTML = place.imageUrl
+    ? '<img class="d-hero" src="' + esc(place.imageUrl) + '" alt="' + esc(place.name) + '">'
+    : '<div class="d-hero-ph">' + (place.icon || '🏛️') + '</div>';
+
+  document.getElementById('d-meta').innerHTML = ''
+    + (place.category ? '<span class="d-tag">' + esc(place.category) + '</span>' : '')
+    + (place.period   ? '<span class="d-tag">📅 ' + esc(place.period) + '</span>' : '');
+
+  document.getElementById('d-acts').innerHTML = ''
+    + (place.lat && place.lng
+        ? '<button class="d-btn d-nav" onclick="navigate(' + place.lat + ',' + place.lng + ')">🧭 Google Maps</button>'
+        : '')
+    + (place.audioText
+        ? '<button class="d-btn d-audio" type="button" onclick="startAudio(\'' + escJsStr(place.id) + '\')">🔊 Sesli Rehber</button>'
+        : '');
+
+  /* Detail paneli stack'e ekle — list panel varsa onun ÜSTÜNDE açılır */
+  openPanel('detail');
+
+  /* Haritada ilgili noktaya git */
+  if (place.lat && place.lng && gmap) {
+    gmap.setView([place.lat, place.lng], 17, { animate: true });
+  }
+}
+
+/* ══════════════════════════════════════════
+   NAVİGASYON — Google Maps
+══════════════════════════════════════════ */
+window.navigate = function(lat, lng) {
+  var win = window.open(
+    'https://www.google.com/maps/dir/?api=1&destination=' + lat + ',' + lng + '&travelmode=walking',
+    '_blank',
+    'noopener'
+  );
+  if (win) win.opener = null;
+};
+
+/* ══════════════════════════════════════════
+   KONUM — Mavi Nokta
+══════════════════════════════════════════ */
+window.locateMe = function() {
+  if (!navigator.geolocation) { showToast('Konum desteklenmiyor'); return; }
+  showToast('Konum alınıyor…');
+  navigator.geolocation.getCurrentPosition(
+    function(pos) {
+      var lat = pos.coords.latitude, lng = pos.coords.longitude;
+      if (userMarker) gmap.removeLayer(userMarker);
+      var dot = document.createElement('div');
+      dot.className = 'u-dot';
+      var icon = L.divIcon({ className:'', html: dot.outerHTML, iconSize:[18,18], iconAnchor:[9,9] });
+      userMarker = L.marker([lat, lng], { icon: icon, zIndexOffset: 999 }).addTo(gmap);
+      gmap.setView([lat, lng], 16, { animate: true });
+      showToast('Konumunuz gösteriliyor ✓');
+    },
+    function() { showToast('Konum alınamadı. Lütfen konum iznini verin.'); },
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+};
+
+/* ══════════════════════════════════════════
+   SESLİ REHBER
+══════════════════════════════════════════ */
+window.startAudio = function(placeId) {
+  var place = places.find(function(p){ return p.id === placeId; }) || activePlace;
+  if (!place || !place.audioText) { showToast('Sesli anlatım mevcut değil'); return; }
+  if (synth.speaking) synth.cancel();
+  utter = new SpeechSynthesisUtterance(place.audioText);
+  utter.lang = 'tr-TR'; utter.rate = 0.9; utter.pitch = 1;
+  utter.onstart = function() {
+    speaking = true; paused = false;
+    document.getElementById('ab-thumb').textContent  = place.icon || '🏛️';
+    document.getElementById('ab-title').textContent  = place.name;
+    document.getElementById('ab-status').textContent = 'Oynatılıyor…';
+    document.getElementById('ab-play').textContent   = '⏸';
+    document.getElementById('audio-bar').classList.add('on');
+  };
+  utter.onend = function() {
+    speaking = false;
+    document.getElementById('ab-status').textContent = 'Tamamlandı';
+    document.getElementById('ab-play').textContent   = '▶';
+    document.getElementById('ab-fill').style.width   = '100%';
+  };
+  utter.onerror   = function() { speaking = false; closeAudio(); };
+  utter.onboundary = function(e) {
+    if (utter.text.length > 0)
+      document.getElementById('ab-fill').style.width =
+        Math.round(e.charIndex / utter.text.length * 100) + '%';
+  };
+  synth.speak(utter);
+};
+
+window.toggleAudio = function() {
+  if (!synth) return;
+  if (paused) {
+    synth.resume(); paused = false;
+    document.getElementById('ab-play').textContent   = '⏸';
+    document.getElementById('ab-status').textContent = 'Oynatılıyor…';
+  } else {
+    synth.pause(); paused = true;
+    document.getElementById('ab-play').textContent   = '▶';
+    document.getElementById('ab-status').textContent = 'Duraklatıldı';
+  }
+};
+
+window.closeAudio = function() {
+  synth.cancel(); speaking = false; paused = false;
+  document.getElementById('audio-bar').classList.remove('on');
+  document.getElementById('ab-fill').style.width = '0%';
+};
+
+document.addEventListener('visibilitychange', function() {
+  if (!document.hidden && speaking && !paused && synth.paused) synth.resume();
+});
+
+/* ══════════════════════════════════════════
+   QR TARAYICI
+══════════════════════════════════════════ */
+async function startQR() {
+  if (typeof Html5Qrcode === 'undefined' || qrRunning) return;
+  qrRunning = true;
+  qrScanner = new Html5Qrcode('qr-reader');
+  try {
+    await qrScanner.start(
+      { facingMode: 'environment' },
+      { fps: 10, qrbox: { width: 220, height: 220 } },
+      function(text) { handleQR(text); },
+      null
+    );
+  } catch(e) {
+    showToast('Kameraya erişilemedi. Lütfen izin verin.');
+    closePanel('qr');
+  }
+}
+
+function handleQR(text) {
+  stopQRScanner();
+  var placeId = null;
+  if (text.startsWith('kula-place:')) {
+    placeId = text.replace('kula-place:', '').trim();
+  } else {
+    try { placeId = new URL(text).searchParams.get('id'); } catch(_){}
+    if (!placeId) placeId = text.trim();
+  }
+  var p = places.find(function(x) { return x.id === placeId; });
+  if (p) { openDetail(p); }
+  else   { showToast('Eser bulunamadı.'); goTab('map'); }
+}
+
+function stopQRScanner() {
+  if (qrScanner) {
+    try { qrScanner.stop(); }  catch(_){}
+    try { qrScanner.clear(); } catch(_){}
+    qrScanner = null;
+  }
+  qrRunning = false;
+}
+
+window.stopQR = function() { stopQRScanner(); closePanel('qr'); };
+
+/* ══════════════════════════════════════════
+   PANEL / TAB — Stack Sistemi
+   Her panel bir öncekinin ÜSTÜNDE açılır.
+   Geri tuşu sadece o paneli kapatır,
+   alttaki panel görünür kalır.
+══════════════════════════════════════════ */
+
+var PANEL_NAMES = ['list','detail','qr','info'];
+/* openPanels = yığın, son eleman en üstte */
+
+function updateZIndex() {
+  /* Tüm sıfırla */
+  PANEL_NAMES.forEach(function(n) {
+    var el = document.getElementById(n + '-panel');
+    if (el) { el.classList.remove('z1','z2','z3'); }
+  });
+  /* Yığındaki sırayla z-index ver */
+  openPanels.forEach(function(n, i) {
+    var el = document.getElementById(n + '-panel');
+    if (el) el.classList.add('z' + (i + 1));
+  });
+}
+
+function openPanel(name) {
+  /* Zaten açıksa tekrar açma */
+  if (openPanels.includes(name)) return;
+
+  var el = document.getElementById(name + '-panel');
+  if (!el) return;
+
+  openPanels.push(name);
+  updateZIndex();
+
+  /* Önce z-index atansın, sonra animasyon */
+  requestAnimationFrame(function() {
+    el.classList.add('open');
+  });
+
+  if (name === 'list')   renderList(places);
+  if (name === 'qr')     setTimeout(startQR, 400);
+
+  setNavActive(name);
+}
+
+function closeTopPanel() {
+  if (!openPanels.length) return;
+  var name = openPanels[openPanels.length - 1];
+  _doClose(name);
+}
+
+function closePanel(name) {
+  _doClose(name);
+}
+
+function _doClose(name) {
+  var el = document.getElementById(name + '-panel');
+  if (el) el.classList.remove('open');
+
+  /* Animasyon bittikten sonra z-index sınıfını da kaldır */
+  setTimeout(function() {
+    if (el) el.classList.remove('z1','z2','z3');
+  }, 300);
+
+  openPanels = openPanels.filter(function(p) { return p !== name; });
+
+  if (name === 'qr') stopQRScanner();
+
+  /* Altta kalan paneli aktif göster */
+  var active = openPanels.length ? openPanels[openPanels.length - 1] : 'map';
+  setNavActive(active);
+  updateZIndex();
+}
+
+function closeDetail() {
+  closePanel('detail');
+}
+
+window.openPanel   = openPanel;
+window.closePanel  = closePanel;
+window.closeDetail = closeDetail;
+
+window.goTab = function(tab) {
+  /* Tüm panelleri kapat */
+  PANEL_NAMES.forEach(function(n) {
+    var el = document.getElementById(n + '-panel');
+    if (el) {
+      el.classList.remove('open');
+      setTimeout(function(){ el.classList.remove('z1','z2','z3'); }, 300);
+    }
+  });
+  stopQRScanner();
+  openPanels = [];
+
+  if (tab !== 'map') openPanel(tab);
+  setNavActive(tab);
+
+  if (tab === 'map' && gmap) {
+    setTimeout(function(){ gmap.invalidateSize(); }, 50);
+  }
+};
+
+function setNavActive(tab) {
+  ['map','list','qr','info'].forEach(function(t) {
+    var btn = document.getElementById('nb-' + t);
+    if (btn) btn.classList.toggle('active', t === tab);
+  });
+}
+
+/* ══════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════ */
+var toastTimer;
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.classList.remove('on'); }, 3000);
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && openPanels.length) closeTopPanel();
+});
+
+/* ══════════════════════════════════════════
+   YARDIMCI
+══════════════════════════════════════════ */
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function escJsStr(s) {
+  return String(s || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
+/* ══════════════════════════════════════════
+   BOOT
+══════════════════════════════════════════ */
+async function boot() {
+  try {
+    buildMap();
+    await loadPlaces();
+    addMarkers();
+  } catch(e) {
+    console.error('Boot error:', e);
+  }
+  var ld = document.getElementById('loader');
+  ld.classList.add('gone');
+  setTimeout(function(){ ld.style.display = 'none'; }, 600);
+}
+
+/* Leaflet yüklendi mi kontrol et, yüklendiyse başlat */
+if (typeof L !== 'undefined') {
+  boot();
+} else {
+  window.addEventListener('load', boot);
+}
+</script>
+</body>
+</html>
