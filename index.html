@@ -39,22 +39,26 @@
       touch-action: pan-x pan-y;
     }
     #map {
-      height: calc(100vh - 75px);
+      height: calc(100vh - 105px); /* 75px (butonlar) + 30px (alt bilgi) */
       width: 100%;
       z-index: 1;
     }
-    /* Bottom Navigation */
+    /* Bottom Navigation - Yeni yapı: butonlar + alt footer */
     .bottom-nav {
       position: fixed;
       bottom: 0;
       width: 100%;
-      height: 75px;
       background: rgba(255, 252, 245, 0.96);
       backdrop-filter: blur(10px);
-      display: flex;
       box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
       z-index: 2000;
       border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+    }
+    .nav-buttons {
+      display: flex;
+      height: 75px;
     }
     .nav-btn {
       flex: 1;
@@ -75,10 +79,43 @@
     .nav-btn i { font-size: 24px; }
     .nav-btn.active { color: var(--primary); font-weight: 700; background: linear-gradient(to top, rgba(184,124,46,0.1), transparent); }
     
+    /* Alt footer (imza, saat, belediye) */
+    .nav-footer {
+      height: 30px;
+      background: rgba(0, 0, 0, 0.03);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      font-size: 11px;
+      color: #6b5a48;
+      font-family: 'Inter', monospace;
+    }
+    .signature {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .signature i {
+      font-size: 11px;
+      color: var(--primary);
+    }
+    .datetime {
+      background: rgba(0,0,0,0.05);
+      padding: 2px 8px;
+      border-radius: 30px;
+      font-size: 10px;
+    }
+    .municipality {
+      font-weight: 500;
+      letter-spacing: 0.3px;
+    }
+    
     .panel {
       position: fixed;
       inset: 0;
-      bottom: 75px;
+      bottom: 105px;
       background: var(--bg);
       transform: translateX(100%);
       transition: transform 0.3s cubic-bezier(0.2,0.9,0.4,1.1);
@@ -226,30 +263,23 @@
     }
     .route-btn { background: #2c6e9e; color: white; border: none; margin-top: 6px; padding: 5px 12px; border-radius: 50px; font-size: 0.7rem; cursor: pointer; touch-action: manipulation; }
     .user-loc-btn {
-      position: absolute; bottom: 100px; right: 12px; z-index: 1000;
+      position: absolute; bottom: 130px; right: 12px; z-index: 1000;
       background: white; border-radius: 50px; padding: 10px 14px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.2); cursor: pointer; border: none; font-weight: 600;
       display: flex; align-items: center; gap: 6px;
       touch-action: manipulation;
     }
-    .signature-bar {
-      position: absolute; bottom: 85px; left: 12px; z-index: 1000;
-      background: rgba(0,0,0,0.65); backdrop-filter: blur(8px);
-      border-radius: 40px; padding: 6px 16px; color: #fef3da;
-      font-family: 'Cinzel', serif; font-size: 13px; display: flex; align-items: center; gap: 12px;
-      pointer-events: none; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    }
-    .datetime { font-family: 'Inter', monospace; font-size: 12px; background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 30px; }
     /* Hide routing itinerary panel completely */
     .leaflet-routing-container, .leaflet-routing-collapsible, .leaflet-routing-alt {
       display: none !important;
     }
     @media (max-width: 550px) {
-      .signature-bar { font-size: 10px; gap: 8px; padding: 4px 12px; bottom: 90px; }
-      .datetime { font-size: 10px; }
-      .user-loc-btn { bottom: 100px; padding: 8px 12px; font-size: 12px; }
+      .user-loc-btn { bottom: 130px; padding: 8px 12px; font-size: 12px; }
       .nav-btn { font-size: 10px; }
       .nav-btn i { font-size: 20px; }
+      .nav-footer { font-size: 9px; padding: 0 10px; }
+      .signature { gap: 6px; }
+      .datetime { font-size: 9px; }
     }
   </style>
 </head>
@@ -258,15 +288,21 @@
 <div id="map"></div>
 <button class="user-loc-btn" onclick="app.locateUser()" id="locateBtn"><i class="fas fa-location-arrow"></i> Konumumu Bul</button>
 
-<div class="signature-bar">
-  <i class="fas fa-code"></i> <span>Halo was here</span>
-  <div class="datetime" id="liveDateTime"></div>
-</div>
-
 <div class="bottom-nav">
-  <button class="nav-btn active" id="nav-map" onclick="app.switchPanel('map')"><i class="fas fa-map"></i><span>Harita</span></button>
-  <button class="nav-btn" id="nav-list" onclick="app.switchPanel('list')"><i class="fas fa-list-ul"></i><span>Eserler</span></button>
-  <button class="nav-btn" id="nav-admin" onclick="app.switchPanel('admin')"><i class="fas fa-shield-alt"></i><span>Yönetim</span></button>
+  <div class="nav-buttons">
+    <button class="nav-btn active" id="nav-map" onclick="app.switchPanel('map')"><i class="fas fa-map"></i><span>Harita</span></button>
+    <button class="nav-btn" id="nav-list" onclick="app.switchPanel('list')"><i class="fas fa-list-ul"></i><span>Eserler</span></button>
+    <button class="nav-btn" id="nav-admin" onclick="app.switchPanel('admin')"><i class="fas fa-shield-alt"></i><span>Yönetim</span></button>
+  </div>
+  <div class="nav-footer">
+    <div class="signature">
+      <i class="fas fa-code"></i> <span>Halo was here</span>
+      <div class="datetime" id="liveDateTime"></div>
+    </div>
+    <div class="municipality">
+      <i class="fas fa-tree"></i> Kula Belediyesi 2026
+    </div>
+  </div>
 </div>
 
 <div id="list-panel" class="panel">
@@ -382,7 +418,6 @@
 
   function initMap() {
     // Google uydu katmanı (sadece uydu görüntüsü, POI etiketleri ve işletme simgeleri kapalı)
-    // lyrs=s : uydu görüntüsü, herhangi bir etiket veya işaretçi içermez
     map = L.map('map').setView([38.5465, 28.6490], 13);
     L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
       maxZoom: 20,
