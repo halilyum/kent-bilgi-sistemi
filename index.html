@@ -1,725 +1,594 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#1a1200" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <title>Kula Kent Rehberi</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+  <title>Kula Kent Rehberi | Tarihi Miras & Navigasyon</title>
+  <!-- Leaflet + Cluster + Routing -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Noto+Serif+TR:wght@400;600&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+  <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+  <!-- Fonts & Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --gold:#c9a84c;--gold-l:#e8c97a;--gold-d:#8b6914;
-  --ink:#1a1200;--ink2:#0d0900;
-  --parch:#f5edd6;--parch2:#ede0be;
-  --rust:#9b3a1a;--sky:#2563eb;
-  --surf:rgba(13,9,0,0.95);
-  --fh:'Cinzel',serif;--fb:'Noto Serif TR',serif;
-  --safe-b:env(safe-area-inset-bottom,0px);
-  --safe-t:env(safe-area-inset-top,0px);
-  --nav-h:61px;
-}
-html,body{height:100%;overflow:hidden;background:var(--ink2);color:var(--parch);font-family:var(--fb);-webkit-tap-highlight-color:transparent}
-
-/* ─── LAYOUT ─── */
-#app{display:flex;flex-direction:column;height:100dvh;height:100vh;position:relative}
-#map-wrap{flex:1;position:relative;z-index:1}
-#map{width:100%;height:100%}
-
-/* ─── HEADER ─── */
-#header{
-  position:absolute;top:0;left:0;right:0;z-index:10;
-  padding:calc(12px + var(--safe-t)) 16px 36px;
-  background:linear-gradient(to bottom,rgba(13,9,0,0.85),transparent);
-  pointer-events:none;
-}
-.logo{display:flex;align-items:center;gap:10px;pointer-events:all}
-.logo-badge{width:38px;height:38px;border:2px solid var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--gold);background:rgba(13,9,0,0.7);flex-shrink:0}
-.logo h1{font-family:var(--fh);font-size:13px;letter-spacing:.08em;color:var(--gold-l);line-height:1.15}
-.logo p{font-size:9px;color:var(--parch2);letter-spacing:.12em;opacity:.6}
-
-/* ─── NAV ─── (her zaman en üstte) */
-#nav{
-  flex-shrink:0;display:flex;
-  height:calc(var(--nav-h) + var(--safe-b));
-  padding-bottom:var(--safe-b);
-  background:var(--surf);
-  border-top:1px solid rgba(201,168,76,.25);
-  position:relative;z-index:999;
-  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
-}
-.nb{
-  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:3px;border:none;background:none;cursor:pointer;
-  color:rgba(245,237,214,.35);font-family:var(--fb);font-size:10px;
-  min-height:var(--nav-h);transition:color .2s;
-}
-.nb .i{font-size:21px;line-height:1}
-.nb.on{color:var(--gold)}
-.nb:active{opacity:.7}
-
-/* ─── FABs ─── */
-.fabs{
-  position:absolute;right:12px;
-  bottom:calc(var(--nav-h) + var(--safe-b) + 12px);
-  display:flex;flex-direction:column;gap:10px;z-index:20;
-}
-.fab{
-  width:50px;height:50px;border-radius:50%;border:none;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;font-size:20px;
-  box-shadow:0 3px 12px rgba(0,0,0,.5);transition:transform .15s;
-}
-.fab:active{transform:scale(.9)}
-.fab-loc{background:rgba(13,9,0,.9);border:2px solid var(--gold);color:var(--gold)}
-.fab-qr{background:var(--gold);color:var(--ink)}
-
-/* ─── PANEL ─── */
-/* Panel nav barın ÜSTÜNDE, ama nav bar GÖRÜNÜR KALAR */
-.panel{
-  position:fixed;
-  top:0;left:0;right:0;
-  bottom:calc(var(--nav-h) + var(--safe-b));
-  background:var(--ink);
-  display:flex;flex-direction:column;
-  transform:translateX(100%);
-  transition:transform .3s cubic-bezier(.25,.46,.45,.94);
-  z-index:100;   /* nav(999) altında, harita(1) üstünde */
-}
-.panel.show{transform:translateX(0)}
-
-/* Detay en üstte, list'in üstünde */
-#detail-panel{z-index:101}
-
-.ph{
-  display:flex;align-items:center;gap:12px;
-  padding:calc(14px + var(--safe-t)) 16px 12px;
-  border-bottom:1px solid rgba(201,168,76,.15);
-  flex-shrink:0;background:var(--ink);
-}
-.ph-back{
-  width:44px;height:44px;border-radius:50%;
-  border:1.5px solid rgba(201,168,76,.3);background:transparent;
-  color:var(--gold);font-size:20px;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;flex-shrink:0;
-}
-.ph-title{font-family:var(--fh);font-size:15px;color:var(--gold-l);letter-spacing:.06em}
-.pb{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:16px}
-
-/* ─── LİSTE ─── */
-.search-box{padding:10px 16px;flex-shrink:0;background:var(--ink)}
-.search-inp{
-  width:100%;background:rgba(245,237,214,.05);
-  border:1px solid rgba(201,168,76,.2);border-radius:99px;
-  padding:11px 16px;color:var(--parch);font-family:var(--fb);font-size:15px;outline:none;
-}
-.search-inp::placeholder{color:rgba(245,237,214,.28)}
-.search-inp:focus{border-color:var(--gold-d)}
-
-.pgrid{display:grid;gap:11px}
-.pcard{
-  display:flex;gap:12px;align-items:flex-start;
-  background:rgba(245,237,214,.04);border:1px solid rgba(201,168,76,.12);
-  border-radius:14px;padding:13px;cursor:pointer;
-  transition:background .15s,border-color .15s;
-  /* Tıklanabilirlik için minimum alan */
-  min-height:44px;
-}
-.pcard:active{background:rgba(201,168,76,.1);border-color:var(--gold-d)}
-.pthumb{
-  width:68px;height:68px;border-radius:10px;flex-shrink:0;
-  background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.15);
-  display:flex;align-items:center;justify-content:center;font-size:26px;overflow:hidden;
-}
-.pthumb img{width:100%;height:100%;object-fit:cover}
-.pinfo{flex:1;min-width:0}
-.pinfo h3{font-family:var(--fh);font-size:13px;color:var(--gold-l);margin-bottom:3px}
-.pinfo p{font-size:12px;color:rgba(245,237,214,.5);line-height:1.5;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.pbadge{font-size:10px;padding:3px 8px;background:rgba(201,168,76,.08);
-  border:1px solid rgba(201,168,76,.18);border-radius:99px;color:var(--gold);
-  display:inline-block;margin-top:5px}
-
-/* ─── DETAY ─── */
-#detail-panel .pb{padding:0}
-.d-hero{width:100%;height:210px;object-fit:cover;display:block}
-.d-hero-ph{width:100%;height:210px;display:flex;align-items:center;justify-content:center;
-  font-size:60px;background:linear-gradient(135deg,rgba(201,168,76,.1),rgba(201,168,76,.02))}
-.d-body{padding:18px 16px 28px}
-.d-title{font-family:var(--fh);font-size:20px;color:var(--gold-l);letter-spacing:.04em;margin-bottom:6px}
-.d-tags{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
-.d-tag{font-size:11px;padding:3px 9px;background:rgba(201,168,76,.08);
-  border:1px solid rgba(201,168,76,.18);border-radius:99px;color:var(--gold)}
-.d-desc{font-size:14px;line-height:1.8;color:var(--parch2);margin-bottom:20px}
-.d-btns{display:flex;gap:10px}
-.d-btn{
-  flex:1;height:52px;border-radius:10px;border:none;cursor:pointer;
-  font-family:var(--fh);font-size:12px;letter-spacing:.06em;
-  display:flex;align-items:center;justify-content:center;gap:6px;
-}
-.d-btn:active{opacity:.82;transform:scale(.97)}
-.d-nav{background:var(--sky);color:#fff}
-.d-snd{background:var(--gold);color:var(--ink)}
-
-/* ─── QR ─── */
-.qr-body{display:flex;flex-direction:column;align-items:center;gap:18px;padding:24px 16px}
-.qr-frame{position:relative;width:min(72vw,260px);height:min(72vw,260px);border-radius:16px;overflow:hidden;background:#000}
-.qr-c{position:absolute;width:24px;height:24px;border-color:var(--gold);border-style:solid;border-width:0}
-.qr-c.tl{top:0;left:0;border-top-width:4px;border-left-width:4px;border-top-left-radius:7px}
-.qr-c.tr{top:0;right:0;border-top-width:4px;border-right-width:4px;border-top-right-radius:7px}
-.qr-c.bl{bottom:0;left:0;border-bottom-width:4px;border-left-width:4px;border-bottom-left-radius:7px}
-.qr-c.br{bottom:0;right:0;border-bottom-width:4px;border-right-width:4px;border-bottom-right-radius:7px}
-.qr-line{position:absolute;left:6px;right:6px;height:2px;background:var(--gold);
-  box-shadow:0 0 8px var(--gold);animation:scan 2s ease-in-out infinite}
-@keyframes scan{0%{top:6px;opacity:1}95%{top:calc(100% - 8px);opacity:1}100%{top:6px;opacity:0}}
-.qr-hint{font-size:13px;color:rgba(245,237,214,.5);text-align:center;line-height:1.6;max-width:260px}
-
-/* ─── INFO ─── */
-.is{margin-bottom:22px}
-.is h3{font-family:var(--fh);font-size:12px;color:var(--gold);letter-spacing:.08em;
-  margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid rgba(201,168,76,.13)}
-.ir{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid rgba(245,237,214,.04);
-  font-size:14px;color:var(--parch2);line-height:1.5}
-.ir .ic{font-size:17px;flex-shrink:0;width:22px;text-align:center}
-
-/* ─── AUDIO BAR ─── */
-#abar{
-  position:fixed;left:0;right:0;
-  bottom:calc(var(--nav-h) + var(--safe-b));
-  z-index:998;
-  background:var(--surf);border-top:1px solid rgba(201,168,76,.28);
-  padding:9px 14px;display:none;align-items:center;gap:11px;
-  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
-  animation:sup .3s ease;
-}
-#abar.on{display:flex}
-@keyframes sup{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
-.at{width:42px;height:42px;border-radius:8px;background:rgba(201,168,76,.1);
-  display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
-.ai{flex:1;min-width:0}
-.an{font-size:13px;font-weight:600;color:var(--gold-l);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.as{font-size:11px;color:rgba(245,237,214,.4);margin-top:1px}
-.ap{height:3px;background:rgba(201,168,76,.13);border-radius:2px;margin-top:4px;overflow:hidden}
-.af{height:100%;background:var(--gold);border-radius:2px;width:0%;transition:width .3s linear}
-.ab-btns{display:flex;gap:6px}
-.ab-btn{width:42px;height:42px;border-radius:50%;border:none;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;font-size:17px;transition:transform .15s}
-.ab-btn:active{transform:scale(.9)}
-.ab-pl{background:var(--gold);color:var(--ink)}
-.ab-cl{background:rgba(245,237,214,.07);color:var(--parch2);font-size:13px}
-
-/* ─── LEAFLET ─── */
-.leaflet-control-attribution{display:none!important}
-.leaflet-control-zoom{border:none!important;box-shadow:0 2px 10px rgba(0,0,0,.4)!important}
-.leaflet-control-zoom a{
-  background:rgba(13,9,0,.88)!important;color:var(--gold)!important;
-  border:1px solid rgba(201,168,76,.25)!important;
-  font-size:15px!important;line-height:26px!important;width:30px!important;height:30px!important;
-}
-.leaflet-control-zoom-in{border-radius:8px 8px 0 0!important;border-bottom:none!important}
-.leaflet-control-zoom-out{border-radius:0 0 8px 8px!important}
-
-/* Popup */
-.leaflet-popup-content-wrapper{
-  background:var(--ink2)!important;border:1px solid var(--gold-d)!important;
-  border-radius:12px!important;padding:0!important;box-shadow:0 4px 20px rgba(0,0,0,.6)!important;
-  cursor:pointer;
-}
-.leaflet-popup-tip-container{display:none!important}
-.leaflet-popup-content{margin:0!important}
-.leaflet-popup-close-button{color:var(--gold)!important;right:8px!important;top:6px!important;font-size:17px!important}
-.ppop{padding:13px 14px 12px}
-.ppop-name{font-family:var(--fh);font-size:13px;color:var(--gold-l);margin-bottom:2px}
-.ppop-cat{font-size:11px;color:rgba(245,237,214,.48);margin-bottom:7px}
-.ppop-hint{font-size:11px;color:var(--gold);opacity:.8}
-
-/* Marker */
-.kpin{width:34px;height:34px;background:var(--gold);border:3px solid var(--ink2);
-  border-radius:50% 50% 50% 0;transform:rotate(-45deg);
-  box-shadow:0 3px 8px rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;cursor:pointer}
-.kpin-i{transform:rotate(45deg);font-size:13px;line-height:1}
-.udot{width:16px;height:16px;background:var(--sky);border:3px solid #fff;border-radius:50%;
-  box-shadow:0 0 0 5px rgba(37,99,235,.25);animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{box-shadow:0 0 0 5px rgba(37,99,235,.25)}50%{box-shadow:0 0 0 12px rgba(37,99,235,.06)}}
-
-/* ─── TOAST ─── */
-#toast{
-  position:fixed;left:50%;
-  bottom:calc(var(--nav-h) + var(--safe-b) + 72px);
-  transform:translateX(-50%) translateY(14px);
-  background:rgba(13,9,0,.95);border:1px solid rgba(201,168,76,.25);
-  color:var(--parch);padding:9px 18px;border-radius:99px;font-size:13px;
-  pointer-events:none;opacity:0;transition:opacity .3s,transform .3s;
-  white-space:nowrap;z-index:997;max-width:86vw;text-align:center;
-}
-#toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
-
-/* ─── LOADER ─── */
-#loader{
-  position:fixed;inset:0;background:var(--ink2);z-index:9999;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;
-  transition:opacity .4s;
-}
-#loader.gone{opacity:0;pointer-events:none}
-.lr{width:68px;height:68px;border:3px solid rgba(201,168,76,.18);border-top-color:var(--gold);
-  border-radius:50%;animation:spin 1s linear infinite}
-.lt{font-family:var(--fh);font-size:17px;color:var(--gold);letter-spacing:.1em}
-@keyframes spin{to{transform:rotate(360deg)}}
-
-/* ─── OFFLINE ─── */
-#offline{position:fixed;top:0;left:0;right:0;z-index:10000;background:var(--rust);
-  color:#fff;font-size:13px;padding:9px 14px;display:none;align-items:center;
-  justify-content:center;gap:8px;text-align:center}
-#offline.on{display:flex}
-
-::-webkit-scrollbar{width:3px}
-::-webkit-scrollbar-thumb{background:rgba(201,168,76,.2);border-radius:2px}
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    :root {
+      --primary: #b87c2e;
+      --primary-dark: #8b5a2b;
+      --bg: #fef8ed;
+      --card: #ffffff;
+      --text: #2e2a24;
+      --border: #e5d9cc;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+      touch-action: pan-x pan-y;
+    }
+    #map {
+      height: calc(100vh - 75px);
+      width: 100%;
+      z-index: 1;
+    }
+    /* Bottom Navigation */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      height: 75px;
+      background: rgba(255, 252, 245, 0.96);
+      backdrop-filter: blur(10px);
+      display: flex;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+      z-index: 2000;
+      border-top: 1px solid var(--border);
+    }
+    .nav-btn {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      background: none;
+      border: none;
+      font-size: 12px;
+      font-weight: 500;
+      color: #7e6e58;
+      cursor: pointer;
+      transition: 0.2s;
+      touch-action: manipulation;
+    }
+    .nav-btn i { font-size: 24px; }
+    .nav-btn.active { color: var(--primary); font-weight: 700; background: linear-gradient(to top, rgba(184,124,46,0.1), transparent); }
+    
+    .panel {
+      position: fixed;
+      inset: 0;
+      bottom: 75px;
+      background: var(--bg);
+      transform: translateX(100%);
+      transition: transform 0.3s cubic-bezier(0.2,0.9,0.4,1.1);
+      z-index: 1500;
+      overflow-y: auto;
+      padding: 20px 18px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .panel.show { transform: translateX(0); }
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      border-bottom: 3px solid var(--primary);
+      padding-bottom: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .panel-header h2 { font-family: 'Cinzel', serif; color: var(--primary); font-size: 1.7rem; }
+    .search-box {
+      background: white;
+      border-radius: 60px;
+      padding: 10px 18px;
+      border: 1px solid var(--border);
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .search-box input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      font-size: 0.9rem;
+      outline: none;
+    }
+    .heritage-card {
+      background: var(--card);
+      border-radius: 24px;
+      padding: 12px;
+      margin-bottom: 14px;
+      display: flex;
+      gap: 14px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: 0.1s linear;
+      touch-action: manipulation;
+    }
+    .heritage-card:active { transform: scale(0.98); background: #fffaf2; }
+    .heritage-card img {
+      width: 70px;
+      height: 70px;
+      border-radius: 18px;
+      object-fit: cover;
+      background: #eae3d6;
+    }
+    .card-info h4 { font-weight: 700; font-size: 1rem; margin-bottom: 6px; }
+    .card-info p { font-size: 0.7rem; color: #6b5a48; line-height: 1.3; }
+    .btn {
+      padding: 12px 20px;
+      border-radius: 40px;
+      font-weight: 600;
+      border: none;
+      background: white;
+      cursor: pointer;
+      transition: 0.2s;
+      font-size: 0.85rem;
+      touch-action: manipulation;
+    }
+    .btn-primary { background: var(--primary); color: white; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+    .btn-outline { border: 1.5px solid var(--border); background: #fffdf9; }
+    .editor-card {
+      background: white;
+      border-radius: 28px;
+      padding: 20px;
+      margin-bottom: 25px;
+      border: 1px solid var(--border);
+    }
+    input, textarea, select {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1.5px solid var(--border);
+      border-radius: 28px;
+      margin-bottom: 14px;
+      font-family: inherit;
+      background: white;
+      font-size: 16px;
+    }
+    .loc-badge {
+      background: #f3efe7;
+      border-radius: 30px;
+      padding: 8px 14px;
+      font-size: 0.75rem;
+      margin: 10px 0;
+      text-align: center;
+    }
+    .photo-zone {
+      height: 150px;
+      border: 2px dashed #cfc6b8;
+      border-radius: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      margin-bottom: 15px;
+      background: #fbf8f0;
+      overflow: hidden;
+    }
+    .photo-zone img { width: 100%; height: 100%; object-fit: cover; }
+    .photo-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .modal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(5px);
+      z-index: 3000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      visibility: hidden;
+      opacity: 0;
+      transition: 0.2s;
+    }
+    .modal.show { visibility: visible; opacity: 1; }
+    .modal-content {
+      background: white;
+      max-width: 90%;
+      width: 380px;
+      border-radius: 40px;
+      padding: 24px;
+      text-align: center;
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+    .modal-content img { width: 100%; border-radius: 28px; max-height: 200px; object-fit: cover; margin-bottom: 12px; }
+    .speak-btn { background: #2c6e9e20; border: none; padding: 12px; border-radius: 50px; font-weight: 600; margin: 12px 0; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; touch-action: manipulation; }
+    .login-card {
+      background: white;
+      border-radius: 48px;
+      padding: 40px 24px;
+      max-width: 340px;
+      margin: 20px auto;
+      text-align: center;
+    }
+    .route-btn { background: #2c6e9e; color: white; border: none; margin-top: 6px; padding: 5px 12px; border-radius: 50px; font-size: 0.7rem; cursor: pointer; touch-action: manipulation; }
+    .user-loc-btn {
+      position: absolute; bottom: 100px; right: 12px; z-index: 1000;
+      background: white; border-radius: 50px; padding: 10px 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2); cursor: pointer; border: none; font-weight: 600;
+      display: flex; align-items: center; gap: 6px;
+      touch-action: manipulation;
+    }
+    .signature-bar {
+      position: absolute; bottom: 85px; left: 12px; z-index: 1000;
+      background: rgba(0,0,0,0.65); backdrop-filter: blur(8px);
+      border-radius: 40px; padding: 6px 16px; color: #fef3da;
+      font-family: 'Cinzel', serif; font-size: 13px; display: flex; align-items: center; gap: 12px;
+      pointer-events: none; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .datetime { font-family: 'Inter', monospace; font-size: 12px; background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 30px; }
+    /* Hide routing itinerary panel completely */
+    .leaflet-routing-container, .leaflet-routing-collapsible, .leaflet-routing-alt {
+      display: none !important;
+    }
+    @media (max-width: 550px) {
+      .signature-bar { font-size: 10px; gap: 8px; padding: 4px 12px; bottom: 90px; }
+      .datetime { font-size: 10px; }
+      .user-loc-btn { bottom: 100px; padding: 8px 12px; font-size: 12px; }
+      .nav-btn { font-size: 10px; }
+      .nav-btn i { font-size: 20px; }
+    }
   </style>
 </head>
 <body>
 
-<div id="offline">📡 İnternet bağlantınızı kontrol edin.</div>
-<div id="loader"><div class="lr"></div><div class="lt">KULA KENT REHBERİ</div></div>
-<div id="toast"></div>
+<div id="map"></div>
+<button class="user-loc-btn" onclick="app.locateUser()" id="locateBtn"><i class="fas fa-location-arrow"></i> Konumumu Bul</button>
 
-<!-- AUDIO BAR -->
-<div id="abar">
-  <div class="at" id="abar-icon">🏛️</div>
-  <div class="ai">
-    <div class="an" id="abar-name">—</div>
-    <div class="as" id="abar-stat">Hazır</div>
-    <div class="ap"><div class="af" id="abar-fill"></div></div>
-  </div>
-  <div class="ab-btns">
-    <button class="ab-btn ab-pl" id="abar-play" onclick="toggleAudio()">▶</button>
-    <button class="ab-btn ab-cl" onclick="closeAudio()">✕</button>
-  </div>
+<div class="signature-bar">
+  <i class="fas fa-code"></i> <span>Halo was here</span>
+  <div class="datetime" id="liveDateTime"></div>
 </div>
 
-<!-- APP -->
-<div id="app">
-  <div id="header">
-    <div class="logo">
-      <div class="logo-badge">⚜</div>
-      <div>
-        <h1>KULA KENT REHBERİ</h1>
-        <p>TARİHİ KENTLER PROJESİ</p>
+<div class="bottom-nav">
+  <button class="nav-btn active" id="nav-map" onclick="app.switchPanel('map')"><i class="fas fa-map"></i><span>Harita</span></button>
+  <button class="nav-btn" id="nav-list" onclick="app.switchPanel('list')"><i class="fas fa-list-ul"></i><span>Eserler</span></button>
+  <button class="nav-btn" id="nav-admin" onclick="app.switchPanel('admin')"><i class="fas fa-shield-alt"></i><span>Yönetim</span></button>
+</div>
+
+<div id="list-panel" class="panel">
+  <div class="panel-header"><h2><i class="fas fa-landmark"></i> Kula Mirası</h2></div>
+  <div class="search-box"><i class="fas fa-search"></i><input type="text" id="search-input" placeholder="Eser ara..." onkeyup="app.filterList()"></div>
+  <div id="heritage-list-container"></div>
+</div>
+
+<div id="admin-panel" class="panel">
+  <div id="admin-login-area">
+    <div class="login-card">
+      <i class="fas fa-chess-queen" style="font-size: 48px; color: var(--primary);"></i>
+      <h2 style="font-family: Cinzel;">Yönetici</h2>
+      <input type="text" id="admin-user" placeholder="Kullanıcı adı" style="margin-top: 20px;">
+      <input type="password" id="admin-pass" placeholder="Şifre">
+      <button class="btn btn-primary" onclick="app.authLogin()" style="margin-top: 20px;">Giriş Yap</button>
+    </div>
+  </div>
+  <div id="admin-dashboard" style="display: none;">
+    <div class="panel-header"><h2><i class="fas fa-tools"></i> Yönetim</h2><button class="btn-outline" style="padding: 6px 16px;" onclick="app.authLogout()">Çıkış</button></div>
+    <div class="admin-controls"><button class="btn btn-primary" onclick="app.openEditor()"><i class="fas fa-plus"></i> Yeni Eser Ekle</button></div>
+    <div id="admin-editor" style="display: none;" class="editor-card">
+      <h3 id="editor-title">➕ Eser Ekle</h3>
+      <input type="text" id="edit-name" placeholder="Eser adı">
+      <select id="edit-type">
+        <option value="dini">🕌 Dini Alan (Cami, Türbe, Kilise)</option>
+        <option value="resmi">🏛️ Resmi Alan (Belediye, Kütüphane, Meydan)</option>
+        <option value="ev">🏠 Tarihi Ev (Konak, Eski Ev)</option>
+        <option value="tarihi">🏺 Tarihi Eser (Kale, Köprü, Çeşme, Roma Eseri)</option>
+      </select>
+      <textarea id="edit-desc" rows="2" placeholder="Detaylı açıklama..."></textarea>
+      <div class="photo-zone" id="photo-zone-admin">
+        <span id="photo-placeholder-text"><i class="fas fa-image"></i> Fotoğraf URL veya yükle</span>
+        <img id="edit-img-preview" style="display: none;">
+        <input type="file" accept="image/*" onchange="app.previewImage(this)">
+      </div>
+      <input type="text" id="edit-img-url" placeholder="Veya görsel URL">
+      <div class="loc-badge" id="admin-loc-status"><i class="fas fa-map-marker-alt"></i> Konum: haritaya tıkla veya "Mevcut Konum"</div>
+      <button class="btn btn-outline" onclick="app.getCurrentPosition()"><i class="fas fa-location-dot"></i> Mevcut GPS Konumumu Al</button>
+      <div style="display: flex; gap: 12px; margin-top: 12px;">
+        <button class="btn btn-primary" onclick="app.saveHeritage()">💾 Kaydet</button>
+        <button class="btn btn-outline" onclick="app.closeEditor()">İptal</button>
       </div>
     </div>
-  </div>
-
-  <div id="map-wrap">
-    <div id="map"></div>
-    <div class="fabs">
-      <button class="fab fab-loc" onclick="locateMe()">📍</button>
-      <button class="fab fab-qr"  onclick="showPanel('qr')">⬛</button>
-    </div>
-  </div>
-
-  <nav id="nav">
-    <button class="nb on" id="nb-map"  onclick="goTab('map')"><span class="i">🗺️</span>Harita</button>
-    <button class="nb"    id="nb-list" onclick="goTab('list')"><span class="i">📜</span>Eserler</button>
-    <button class="nb"    id="nb-qr"   onclick="showPanel('qr')"><span class="i">⬛</span>QR Tara</button>
-    <button class="nb"    id="nb-info" onclick="goTab('info')"><span class="i">ℹ️</span>Rehber</button>
-  </nav>
-</div>
-
-<!-- ── PANELS ── -->
-<div id="list-panel" class="panel">
-  <div class="ph">
-    <button class="ph-back" onclick="hidePanel('list')">←</button>
-    <span class="ph-title">Tarihi Eserler</span>
-  </div>
-  <div class="search-box">
-    <input class="search-inp" type="search" placeholder="Eser ara…" oninput="filterPlaces(this.value)" />
-  </div>
-  <div class="pb"><div class="pgrid" id="pgrid"></div></div>
-</div>
-
-<div id="detail-panel" class="panel">
-  <div class="ph">
-    <button class="ph-back" id="d-back">←</button>
-    <span class="ph-title" id="d-ptitle">Detay</span>
-  </div>
-  <div class="pb" style="padding:0">
-    <div id="d-hero"></div>
-    <div class="d-body">
-      <h2 class="d-title" id="d-name"></h2>
-      <div class="d-tags" id="d-tags"></div>
-      <p class="d-desc" id="d-desc"></p>
-      <div class="d-btns" id="d-btns"></div>
-    </div>
+    <h3 style="margin: 20px 0 12px 0;">📋 Kayıtlı Eserler</h3>
+    <div id="admin-list-container"></div>
   </div>
 </div>
 
-<div id="qr-panel" class="panel">
-  <div class="ph">
-    <button class="ph-back" onclick="stopQR()">←</button>
-    <span class="ph-title">QR Kod Tara</span>
-  </div>
-  <div class="qr-body">
-    <div class="qr-frame" id="qr-reader">
-      <div class="qr-c tl"></div><div class="qr-c tr"></div>
-      <div class="qr-c bl"></div><div class="qr-c br"></div>
-      <div class="qr-line"></div>
-    </div>
-    <p class="qr-hint">Eserin yanındaki QR kodu kameranıza doğrultun. Otomatik tanıma yapılır.</p>
-  </div>
-</div>
-
-<div id="info-panel" class="panel">
-  <div class="ph">
-    <button class="ph-back" onclick="hidePanel('info')">←</button>
-    <span class="ph-title">Rehber Bilgisi</span>
-  </div>
-  <div class="pb">
-    <div class="is">
-      <h3>KULA HAKKINDA</h3>
-      <div class="ir"><span class="ic">🏛️</span><span>Kula, Manisa iline bağlı, Osmanlı dönemi sivil mimarisiyle ünlü tarihi bir ilçedir.</span></div>
-      <div class="ir"><span class="ic">📍</span><span>Manisa İli, Ege Bölgesi, Türkiye</span></div>
-      <div class="ir"><span class="ic">🕐</span><span>Müzeler genellikle 09:00–17:00 açıktır.</span></div>
-    </div>
-    <div class="is">
-      <h3>NASIL KULLANILIR</h3>
-      <div class="ir"><span class="ic">⬛</span><span>QR kodu tarayın — sesli anlatım otomatik açılır.</span></div>
-      <div class="ir"><span class="ic">📍</span><span>Mavi nokta ile konumunuzu görün.</span></div>
-      <div class="ir"><span class="ic">🧭</span><span>Navigasyon ile Google Maps yol tarifi alın.</span></div>
-      <div class="ir"><span class="ic">🔊</span><span>Sesli rehber çalarken alt bar görünür kalır.</span></div>
-    </div>
-    <div class="is">
-      <h3>İLETİŞİM</h3>
-      <div class="ir"><span class="ic">🌐</span><span>kula.bel.tr</span></div>
-      <div class="ir"><span class="ic">📞</span><span>+90 236 816 00 00</span></div>
-    </div>
+<div id="detail-modal" class="modal" onclick="if(event.target===this) app.closeModal()">
+  <div class="modal-content">
+    <img id="modal-img" src="">
+    <h3 id="modal-name"></h3>
+    <p id="modal-desc" style="margin: 12px 0; text-align: left;"></p>
+    <button class="speak-btn" id="speak-btn"><i class="fas fa-volume-up"></i> Sesli Dinle</button>
+    <button class="btn-outline" onclick="app.closeModal()">Kapat</button>
   </div>
 </div>
 
 <script>
-/* ══ VERİ ══ */
-var SAMPLES=[
-  {id:'demircioglu',name:'Demircioğlu Konağı',category:'Osmanlı Konağı',period:'18. Yüzyıl',icon:'🏘️',
-   description:'Kula\'nın en önemli Osmanlı dönemi sivil mimari örneklerinden biri. Cumbalı cephesi ve işlemeli ahşap detayları ile dikkat çeker.',
-   audioText:'Demircioğlu Konağı on sekizinci yüzyılda inşa edilmiştir. Cumbalı cephesi dönemin usta işçiliğini yansıtmaktadır. Kula sivil mimari mirasının en değerli örneklerinden biridir.',
-   lat:38.5455,lng:28.6478,imageUrl:''},
-  {id:'ulu-cami',name:'Kula Ulu Camii',category:'Cami',period:'14. Yüzyıl',icon:'🕌',
-   description:'Kula\'nın en eski ve büyük camii. Manisa Valiliği tarafından restore edilmiş tarihi yapı.',
-   audioText:'Kula Ulu Camii on dördüncü yüzyılda inşa edilmiştir. Anadolu Selçuklu mimarisinin izlerini taşıyan bu yapı asırlardır ibadet merkezi olmuştur.',
-   lat:38.5465,lng:28.6490,imageUrl:''},
-  {id:'muzesi',name:'Kula Müzesi',category:'Müze',period:'Cumhuriyet Dönemi',icon:'🏛️',
-   description:'Yöreye ait arkeolojik buluntuları ve etnografik eserleri barındıran müze.',
-   audioText:'Kula Müzesi bölgenin binlerce yıllık tarihsel zenginliğini gözler önüne seren kapsamlı bir koleksiyona sahiptir.',
-   lat:38.5448,lng:28.6465,imageUrl:''},
-  {id:'saat-kulesi',name:'Kula Saat Kulesi',category:'Anıt',period:'19. Yüzyıl',icon:'🕰️',
-   description:'Osmanlı dönemine ait saat kulesi, ilçenin simgelerinden biridir.',
-   audioText:'Kula Saat Kulesi on dokuzuncu yüzyılda inşa edilmiştir. Osmanlı kentsel mimarisinin karakteristik bir unsuru olarak günümüze ulaşmıştır.',
-   lat:38.5470,lng:28.6484,imageUrl:''},
-  {id:'kursunlu-cami',name:'Kurşunlu Camii',category:'Cami',period:'16. Yüzyıl',icon:'🕌',
-   description:'Kula\'nın tarihi camileri arasında yer alan, kurşun kaplı kubbesiyle tanınan Osmanlı yapısı.',
-   audioText:'Kurşunlu Camii on altıncı yüzyılda inşa edilmiştir. Adını kurşun kaplı kubbelerinden alan bu yapı Osmanlı mimari geleneğinin önemli temsilcilerindendir.',
-   lat:38.5460,lng:28.6472,imageUrl:''}
-];
+  // ---------- TÜR BAZLI İKON TANIMLARI (MOR İKON SATRANÇ KALESİ) ----------
+  function getIconByType(type) {
+    const icons = {
+      dini: L.divIcon({ html: '<i class="fas fa-mosque" style="font-size: 28px; color: #2e7d32; text-shadow: 0 0 2px #fff;"></i>', iconSize: [30, 30], popupAnchor: [0, -12], className: 'custom-icon' }),
+      resmi: L.divIcon({ html: '<i class="fas fa-city" style="font-size: 28px; color: #c62828; text-shadow: 0 0 2px #fff;"></i>', iconSize: [30, 30], popupAnchor: [0, -12], className: 'custom-icon' }),
+      ev: L.divIcon({ html: '<i class="fas fa-home" style="font-size: 28px; color: #1565c0; text-shadow: 0 0 2px #fff;"></i>', iconSize: [30, 30], popupAnchor: [0, -12], className: 'custom-icon' }),
+      tarihi: L.divIcon({ html: '<i class="fas fa-chess-rook" style="font-size: 28px; color: #6a1b9a; text-shadow: 0 0 2px #fff;"></i>', iconSize: [30, 30], popupAnchor: [0, -12], className: 'custom-icon' })
+    };
+    return icons[type] || icons.tarihi;
+  }
 
-/* ══ STATE ══ */
-var gmap=null, umarker=null, places=[], active=null;
-var qrScan=null, qrOn=false;
-var synth=window.speechSynthesis, utt=null, playing=false, paused=false;
-var visiblePanel=null; /* şu an açık olan panel adı */
+  let heritageList = [];
+  let map, markersCluster, userMarker, routingControl;
+  let selectedCoords = null, editingId = null;
+  let currentUtterance = null;
+  let userLatLng = null;
 
-/* ══ ARAÇLAR ══ */
-function e(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
-var toastT;
-function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(function(){t.classList.remove('on')},3000)}
+  // ---------- GÜNCELLENMİŞ KULA GERÇEK MİRAS VERİLERİ (Koordinatlar ve açıklamalar iyileştirildi) ----------
+  const REAL_HERITAGE = [
+    { id: 1, name: "Kurşunlu Camii", type: "dini", lat: 38.5460, lng: 28.6482, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/Kur%C5%9Funlu_Camii_-_Kula_Manisa.jpg/800px-Kur%C5%9Funlu_Camii_-_Kula_Manisa.jpg", desc: "15. yüzyıl sonlarında Saruhanoğulları'ndan Hoca Seyfettin Bey tarafından yaptırılmıştır. Selçuklu mimari tarzında inşa edilen cami, kesme taş ve tuğla işçiliği ile dikkat çeker. İç mekandaki kalem işi süslemeler ve ahşap minberi eşsizdir." },
+    { id: 2, name: "Bekir Beyler Evi", type: "ev", lat: 38.5445, lng: 28.6475, img: "https://picsum.photos/id/104/200/150", desc: "24 odalı görkemli bir Kula konağı. Beyler sülalesi tarafından yaptırılmış, restore edilerek turizme kazandırılmıştır. Osmanlı sivil mimarisinin en tipik özelliklerini taşır. Avlusu, cumbaları ve el işlemeleriyle ünlüdür." },
+    { id: 3, name: "Meryem Ana Kilisesi (Kültür Merkezi)", type: "dini", lat: 38.5472, lng: 28.6510, img: "https://picsum.photos/id/156/200/150", desc: "1837 yılında Rum cemaati tarafından inşa edilmiştir. Günümüzde Kültür Merkezi olarak hizmet vermektedir. Dikdörtgen planlı, tek apsisli yapı, bağdadi tonoz tekniği ile örtülüdür. Kula'nın en önemli ibadet ve kültür yapılarındandır." },
+    { id: 4, name: "Yunus Emre ve Tapduk Emre Türbesi", type: "dini", lat: 38.5240, lng: 28.6240, img: "https://picsum.photos/id/107/200/150", desc: "13. yüzyıl büyük Türk şairi Yunus Emre ve hocası Tapduk Emre'nin Kula'nın Emre Mahallesi'ndeki türbeleri. Her yıl binlerce kişi tarafından ziyaret edilen önemli bir inanç merkezidir. Yunus'un 'Kula'da kaldı' sözü buradan gelir." },
+    { id: 5, name: "Kula-Salihli UNESCO Jeoparkı", type: "tarihi", lat: 38.5964, lng: 28.6625, img: "https://picsum.photos/id/111/200/150", desc: "Türkiye'nin tek UNESCO onaylı jeoparkı. Volkanik oluşumlar, peri bacaları, lav konileri ve prehistorik ayak izleri ile eşsiz doğal güzelliklere ev sahipliği yapmaktadır. 200'den fazla jeosit bulunur." },
+    { id: 6, name: "Kula Peri Bacaları (Kuladokya)", type: "tarihi", lat: 38.5200, lng: 28.6000, img: "https://picsum.photos/id/116/200/150", desc: "Burgaz Köyü yakınlarında yer alan peri bacaları, volkanik tüflerin erozyonuyla oluşmuştur. Kapadokya'yı andıran bu yapılar, Kula-Salihli Jeoparkı sınırları içerisindedir. Bölgeye 'Kuladokya' adı verilmiştir." },
+    { id: 7, name: "Kula Tarihi Evleri (Genel Doku)", type: "ev", lat: 38.5450, lng: 28.6480, img: "https://picsum.photos/id/129/200/150", desc: "18. ve 19. yüzyıldan kalma 3.000'e yakın tarihi ev, Osmanlı sivil mimarisinin en güzel örneklerini oluşturur. Ahşap işçiliği, cumbaları ve taş sokaklarıyla Kula'ya 'Anıt Kent' unvanı kazandırmıştır." },
+    { id: 8, name: "Zabunlar Konağı", type: "ev", lat: 38.5440, lng: 28.6470, img: "https://picsum.photos/id/127/200/150", desc: "19. yüzyıl Osmanlı mimarisinin en güzel örneklerinden biridir. 3 katlı, 13 odalı konak, günümüzde butik otel olarak hizmet vermektedir. Kubbe geçişleri ve süslemeleri etkileyicidir." },
+    { id: 9, name: "Beyler Evi", type: "ev", lat: 38.5435, lng: 28.6472, img: "https://picsum.photos/id/131/200/150", desc: "18. yüzyılda Beyler Sülalesi tarafından yaptırılmış, restore edilerek müze olarak hizmete açılmıştır. Dış sofalı üç odalı plan tipinde iki katlı bir Kula evidir. Geleneksel yaşam kültürünü yansıtır." },
+    { id: 10, name: "Kız Köprüsü (Adala Köprüsü)", type: "tarihi", lat: 38.6300, lng: 28.5700, img: "https://picsum.photos/id/136/200/150", desc: "Adala mahallesinde, Gediz Nehri üzerinde erken Osmanlı dönemine ait tarihi köprü. 6 kemerli, 97 metre uzunluğunda olup bazalt ve gnays taşından inşa edilmiştir. Halk arasında 'Kız Köprüsü' olarak anılır." },
+    { id: 11, name: "Kula Kent Müzesi", type: "resmi", lat: 38.5430, lng: 28.6485, img: "https://picsum.photos/id/138/200/150", desc: "Kula'nın tarihini, kültürünü ve geleneksel yaşam tarzını sergileyen müze. Lidyalılar tarafından icat edilen paranın hikayesi ve Germiyanoğulları dönemi eserleri burada sergilenmektedir." },
+    { id: 12, name: "Carullah Bin Süleyman Camii", type: "dini", lat: 38.5240, lng: 28.6240, img: "https://picsum.photos/id/144/200/150", desc: "Emre Köyü'nde yer alan, 1547-1548 yıllarında Carullah Bin Süleyman tarafından inşa ettirilmiş tarihi cami. Ünlü şair Yunus Emre'nin doğduğu köyde bulunur. Sade ve etkileyici mimarisiyle dikkat çeker." },
+    { id: 13, name: "Hoca Seyfettin Köprüsü", type: "tarihi", lat: 38.5480, lng: 28.6510, img: "https://picsum.photos/id/150/200/150", desc: "15. yüzyılda Hoca Seyfettin tarafından yaptırılan 4 gözlü tarihi köprü. İkisi büyük, ikisi küçük olmak üzere dört kemerden oluşur. Kula Deresi üzerinde yer alır." },
+    { id: 14, name: "Palanduz Evi", type: "ev", lat: 38.5442, lng: 28.6478, img: "https://picsum.photos/id/159/200/150", desc: "Kula'nın tescilli tarihi evlerinden biridir. Geleneksel Türk evi mimarisinin tipik özelliklerini taşır. Ahşap işçiliği ve cumbalı yapısıyla dikkat çeker." },
+    { id: 15, name: "Göldeliler Evi", type: "ev", lat: 38.5448, lng: 28.6476, img: "https://picsum.photos/id/162/200/150", desc: "Kula'nın en önemli tarihi konaklarından biridir. Düz sofalı plan şeması ve geniş odaları ile geleneksel Kula evlerinin karakteristik özelliklerini yansıtır." },
+    { id: 16, name: "Tamburacılar Evi", type: "ev", lat: 38.5455, lng: 28.6473, img: "https://picsum.photos/id/169/200/150", desc: "Tescilli tarihi Kula evlerinden biri. Büyük aile yapısına göre düzenlenmiş, günlük yaşamın yaz aylarında avluda geçtiği geleneksel bir Türk evi örneğidir." },
+    { id: 17, name: "Zeynep Onbaşı Evi (Eski Hastane)", type: "ev", lat: 38.5432, lng: 28.6468, img: "https://picsum.photos/id/175/200/150", desc: "Halk arasında 'Eski Hastane' olarak bilinen, restore edilerek turizme kazandırılan tarihi Kula evi. 12 odalı, iki katlı avlulu bir yapıdır. Kurtuluş Savaşı'nda hastane olarak kullanılmıştır." },
+    { id: 18, name: "Çukur Çeşme (Beş Ulalı)", type: "tarihi", lat: 38.5445, lng: 28.6488, img: "https://picsum.photos/id/186/200/150", desc: "Roma dönemine ait olduğu tahmin edilen, beş oluklu ve dört kaynaktan su alan tarihi çeşme. Adını bulunduğu çukur konumdan almıştır. Kula'nın 12 çukur çeşmesinden biridir." },
+    { id: 19, name: "Zafer Okulu (Lambiyanos Okulu)", type: "resmi", lat: 38.5440, lng: 28.6490, img: "https://picsum.photos/id/20/200/150", desc: "1840'lı yıllarda Rum cemaati tarafından 'Lambiyanos Okulu' olarak inşa edilmiştir. Cumhuriyet sonrası 'Zafer Okulu' adını almıştır. Tarihi Rum okullarının önemli bir örneğidir." },
+    { id: 20, name: "Emir Kaplıcaları (Emir Hamamları)", type: "tarihi", lat: 38.6800, lng: 28.7200, img: "https://picsum.photos/id/29/200/150", desc: "Kula'nın 18 km kuzeydoğusunda, Roma döneminden beri kullanılan termal kaplıcalar. Romatizma, nevralji ve cilt hastalıklarına iyi geldiği bilinmektedir. Su sıcaklığı 40-50°C arasındadır." },
+    { id: 21, name: "Kula Eski Hapishanesi", type: "resmi", lat: 38.5458, lng: 28.6485, img: "https://picsum.photos/id/42/200/150", desc: "Kula'nın tarihi dokusunda yer alan eski hapishane binası, günümüzde farklı amaçlarla kullanılmaktadır. Kula'nın Osmanlı dönemi adliye tarihine ışık tutar." },
+    { id: 22, name: "Sungur Bey Hamamı (Yeni Hamam)", type: "tarihi", lat: 38.5442, lng: 28.6480, img: "https://picsum.photos/id/56/200/150", desc: "16. yüzyılda Selçuklu döneminde inşa edilen tarihi hamam. Çinçin Hamamı olarak da bilinir. Osmanlı hamam mimarisinin güzel bir örneğidir. Halen kullanılmaktadır." },
+    { id: 23, name: "Kula Deresi Köprüsü", type: "tarihi", lat: 38.5420, lng: 28.6450, img: "https://picsum.photos/id/69/200/150", desc: "Kula Deresi üzerinde bulunan tarihi ahşap köprü. Düz atkılı ahşap köprü teknolojisinin önemli örneklerinden biridir. 19-20. yüzyıla tarihlenmektedir." },
+    { id: 24, name: "Taşyaran Vadisi", type: "tarihi", lat: 38.5000, lng: 28.7000, img: "https://picsum.photos/id/88/200/150", desc: "Kula ile Uşak arasında bulunan, su ve rüzgar erozyonuyla oluşmuş etkileyici vadi. Renkli kaya oluşumları ve kanyon yapısıyla doğa severler için eşsiz bir alandır. Yürüyüş rotaları mevcuttur." },
+    { id: 25, name: "Kula Hamamları (Genel)", type: "tarihi", lat: 38.5455, lng: 28.6488, img: "https://picsum.photos/id/96/200/150", desc: "Kula'da Osmanlı döneminden kalma birçok tarihi hamam bulunmaktadır. Sungur Bey Hamamı, Emir Hamamları bunlardan bazılarıdır. Kula'nın sosyal yaşamında önemli yer tutmuşlardır." }
+  ];
 
-window.addEventListener('online',function(){document.getElementById('offline').classList.remove('on')});
-window.addEventListener('offline',function(){document.getElementById('offline').classList.add('on')});
-if(!navigator.onLine) document.getElementById('offline').classList.add('on');
+  function loadData() {
+    const stored = localStorage.getItem('kula_heritage_real');
+    if (stored) heritageList = JSON.parse(stored);
+    else { heritageList = [...REAL_HERITAGE]; saveData(); }
+  }
+  function saveData() { localStorage.setItem('kula_heritage_real', JSON.stringify(heritageList)); }
 
-/* ══ HARİTA ══ */
-function buildMap(){
-  gmap=L.map('map',{center:[38.545,28.647],zoom:15,zoomControl:true,attributionControl:false});
-  L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}&hl=tr',
-    {subdomains:['0','1','2','3'],maxZoom:20}).addTo(gmap);
-  gmap.zoomControl.setPosition('bottomright');
-  setTimeout(function(){gmap.invalidateSize()},200);
-}
+  function initMap() {
+    // Google uydu katmanı (sadece uydu görüntüsü, POI etiketleri ve işletme simgeleri kapalı)
+    // lyrs=s : uydu görüntüsü, herhangi bir etiket veya işaretçi içermez
+    map = L.map('map').setView([38.5465, 28.6490], 13);
+    L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      subdomains: ['mt0','mt1','mt2','mt3'],
+      attribution: '© Google'
+    }).addTo(map);
+    
+    markersCluster = L.markerClusterGroup({ chunkedLoading: true, maxClusterRadius: 50, iconCreateFunction: function(cluster) {
+      return L.divIcon({ html: '<i class="fas fa-landmark" style="color:#fff; background:#b87c2e; border-radius:50%; padding:6px; font-size:14px;"></i>', iconSize: [30,30] });
+    }});
+    map.addLayer(markersCluster);
 
-/* ══ VERİ ══ */
-async function loadData(){
-  try{
-    var raw=localStorage.getItem('kula_c');
-    if(raw){places=JSON.parse(raw);return}
-  }catch(ex){}
-  places=SAMPLES;
-}
-
-/* ══ MARKERlar ══ */
-function buildMarkers(){
-  places.forEach(function(p){
-    if(!p.lat||!p.lng) return;
-    var html='<div class="kpin"><div class="kpin-i">'+(p.icon||'🏛️')+'</div></div>';
-    var ico=L.divIcon({className:'',html:html,iconSize:[34,34],iconAnchor:[17,34],popupAnchor:[0,-38]});
-    var m=L.marker([p.lat,p.lng],{icon:ico}).addTo(gmap);
-
-    /* Popup: sadece bilgi, tıklanınca detay açılır */
-    var pop=L.popup({closeButton:false,closeOnClick:true,maxWidth:220})
-      .setContent(
-        '<div class="ppop">'
-        +'<div class="ppop-name">'+e(p.name)+'</div>'
-        +'<div class="ppop-cat">'+e(p.category||'')+(p.period?' · '+e(p.period):'')+'</div>'
-        +'<div class="ppop-hint">Detay için tekrar dokun →</div>'
-        +'</div>'
-      );
-    m.bindPopup(pop);
-
-    var popOpen=false;
-    m.on('popupopen',function(){popOpen=true});
-    m.on('popupclose',function(){popOpen=false});
-
-    m.on('click',function(){
-      if(popOpen){
-        m.closePopup();
-        openDetail(p);
-      } else {
-        m.openPopup();
+    map.on('click', e => {
+      if (document.getElementById('admin-dashboard').style.display === 'block') {
+        selectedCoords = { lat: e.latlng.lat, lng: e.latlng.lng };
+        document.getElementById('admin-loc-status').innerHTML = `<i class="fas fa-check-circle"></i> Konum seçildi: ${selectedCoords.lat.toFixed(5)}`;
+        if (window.tempMarker) map.removeLayer(window.tempMarker);
+        window.tempMarker = L.marker([selectedCoords.lat, selectedCoords.lng], { icon: getIconByType('tarihi') }).addTo(map).bindPopup("Seçilen konum").openPopup();
       }
     });
+    renderMarkers();
+    // Otomatik konum takibi başlat
+    app.locateUser();
+  }
 
-    /* Popup alanına tıklayınca da detay aç */
-    m.on('popupopen',function(){
-      var pe=m.getPopup().getElement();
-      if(!pe) return;
-      pe.style.cursor='pointer';
-      function doOpen(){m.closePopup();openDetail(p)}
-      pe.addEventListener('click',doOpen,{once:true});
+  function renderMarkers() {
+    if (!markersCluster) return;
+    markersCluster.clearLayers();
+    heritageList.forEach(h => {
+      let icon = getIconByType(h.type);
+      let marker = L.marker([h.lat, h.lng], { icon: icon });
+      marker.bindPopup(`
+        <b>${escapeHtml(h.name)}</b><br>
+        <img src="${h.img}" width="120" style="border-radius:12px"><br>
+        <button class="route-btn" onclick="app.getRouteTo(${h.lat}, ${h.lng})"><i class="fas fa-directions"></i> Noktalı Rota</button>
+        <button class="btn-outline" style="margin-top:5px;padding:4px 8px;" onclick="app.showDetail(${h.id})">Detay</button>
+      `);
+      markersCluster.addLayer(marker);
     });
-  });
-}
-
-/* ══ PANEL SİSTEMİ ══
-   Tek aktif panel: visiblePanel
-   Detay her zaman list'in üstünde açılır.
-═══════════════════════ */
-function showPanel(name){
-  /* Önceki paneli kapat (detay açılırken list kalacak) */
-  if(visiblePanel && visiblePanel!==name && name!=='detail'){
-    document.getElementById(visiblePanel+'-panel').classList.remove('show');
   }
 
-  visiblePanel=name;
-  document.getElementById(name+'-panel').classList.add('show');
-
-  if(name==='list') buildList(places);
-  if(name==='qr')   setTimeout(startQR,350);
-
-  /* Nav aktif */
-  ['map','list','qr','info'].forEach(function(t){
-    document.getElementById('nb-'+t).classList.toggle('on',t===name);
-  });
-}
-
-function hidePanel(name){
-  document.getElementById(name+'-panel').classList.remove('show');
-  if(name==='qr') stopQR();
-
-  /* Detay kapanırsa list hala açık kalabilir */
-  if(name==='detail'){
-    /* list açıksa aktif et */
-    var listEl=document.getElementById('list-panel');
-    if(listEl.classList.contains('show')){
-      visiblePanel='list';
-      ['map','list','qr','info'].forEach(function(t){
-        document.getElementById('nb-'+t).classList.toggle('on',t==='list');
-      });
-      return;
-    }
+  function locateUser() {
+    if (!navigator.geolocation) { alert("Tarayıcı konum desteklemiyor"); return; }
+    navigator.geolocation.getCurrentPosition(pos => {
+      const { latitude, longitude } = pos.coords;
+      userLatLng = { lat: latitude, lng: longitude };
+      if (userMarker) map.removeLayer(userMarker);
+      userMarker = L.marker([latitude, longitude], { icon: L.divIcon({ html: '<i class="fas fa-user-circle" style="font-size:28px; color:#2c6e9e;"></i>', iconSize: [28,28] }) }).addTo(map).bindPopup("Siz buradasınız").openPopup();
+      map.flyTo([latitude, longitude], 14);
+    }, err => { console.warn(err); alert("Konum alınamadı, lütfen konum izni verin."); });
   }
 
-  visiblePanel=null;
-  ['map','list','qr','info'].forEach(function(t){
-    document.getElementById('nb-'+t).classList.toggle('on',t==='map');
-  });
-  if(gmap) setTimeout(function(){gmap.invalidateSize()},50);
-}
-
-window.showPanel=showPanel;
-window.hidePanel=hidePanel;
-
-window.goTab=function(tab){
-  /* Tüm panelleri kapat */
-  ['list','detail','qr','info'].forEach(function(n){
-    document.getElementById(n+'-panel').classList.remove('show');
-  });
-  stopQR();
-  visiblePanel=null;
-
-  if(tab!=='map') showPanel(tab);
-  ['map','list','qr','info'].forEach(function(t){
-    document.getElementById('nb-'+t).classList.toggle('on',t===tab);
-  });
-  if(tab==='map'&&gmap) setTimeout(function(){gmap.invalidateSize()},50);
-};
-
-/* ══ DETAY ══ */
-function openDetail(p){
-  active=p;
-  document.getElementById('d-ptitle').textContent=p.name;
-  document.getElementById('d-name').textContent=p.name;
-  document.getElementById('d-desc').textContent=p.description||'';
-
-  /* Hero */
-  document.getElementById('d-hero').innerHTML=p.imageUrl
-    ?'<img class="d-hero" src="'+e(p.imageUrl)+'" alt="'+e(p.name)+'">'
-    :'<div class="d-hero-ph">'+(p.icon||'🏛️')+'</div>';
-
-  /* Etiketler */
-  document.getElementById('d-tags').innerHTML=
-    (p.category?'<span class="d-tag">'+e(p.category)+'</span>':'')
-    +(p.period?'<span class="d-tag">📅 '+e(p.period)+'</span>':'');
-
-  /* Butonlar */
-  var btns=document.getElementById('d-btns');
-  btns.innerHTML='';
-  if(p.lat&&p.lng){
-    var nb=document.createElement('button');
-    nb.className='d-btn d-nav';nb.textContent='🧭 Google Maps';
-    nb.onclick=function(){window.open('https://www.google.com/maps/dir/?api=1&destination='+p.lat+','+p.lng+'&travelmode=walking','_blank')};
-    btns.appendChild(nb);
-  }
-  if(p.audioText){
-    var ab=document.createElement('button');
-    ab.className='d-btn d-snd';ab.textContent='🔊 Sesli Rehber';
-    ab.onclick=function(){startAudio(p)};
-    btns.appendChild(ab);
+  // Sadece noktalı çizgi gösteren rota (yönlendirme paneli ve ses yok)
+  function getRouteTo(lat, lng) {
+    if (!userLatLng) { alert("Lütfen önce 'Konumumu Bul' butonuna tıklayarak konumunuzu belirleyin."); return; }
+    if (routingControl) map.removeControl(routingControl);
+    routingControl = L.Routing.control({
+      waypoints: [L.latLng(userLatLng.lat, userLatLng.lng), L.latLng(lat, lng)],
+      routeWhileDragging: false,
+      showAlternatives: false,
+      lineOptions: { styles: [{ color: '#ff8c00', weight: 4, opacity: 0.9, lineCap: 'round', lineJoin: 'round', dashArray: '8, 8' }] },
+      createMarker: function() { return null; },
+      itinerary: false,
+      collapsible: false,
+      show: false
+    }).addTo(map);
   }
 
-  /* Geri butonu */
-  document.getElementById('d-back').onclick=function(){hidePanel('detail')};
-
-  /* Detay panelini göster — list'in üstünde, z-index:101 */
-  showPanel('detail');
-
-  /* Haritada göster */
-  if(p.lat&&p.lng&&gmap) gmap.setView([p.lat,p.lng],17,{animate:true});
-}
-
-/* ══ LİSTE ══ */
-function buildList(list){
-  var g=document.getElementById('pgrid');
-  if(!list||!list.length){
-    g.innerHTML='<p style="color:rgba(245,237,214,.3);font-size:14px;text-align:center;padding:28px 0">Sonuç bulunamadı.</p>';
-    return;
+  function renderUserList(filter = "") {
+    const container = document.getElementById('heritage-list-container');
+    let filtered = heritageList.filter(h => h.name.toLowerCase().includes(filter.toLowerCase()) || h.desc.toLowerCase().includes(filter.toLowerCase()));
+    container.innerHTML = filtered.map(h => `
+      <div class="heritage-card" onclick="app.showDetail(${h.id})">
+        <img src="${h.img}" onerror="this.src='https://picsum.photos/70/70?grayscale'">
+        <div class="card-info"><h4>${escapeHtml(h.name)}</h4><p>${escapeHtml(h.desc.substring(0, 70))}...</p></div>
+      </div>
+    `).join('');
   }
-  g.innerHTML='';
-  list.forEach(function(p){
-    var card=document.createElement('div');
-    card.className='pcard';
-    card.innerHTML=
-      (p.imageUrl
-        ?'<div class="pthumb"><img src="'+e(p.imageUrl)+'" alt="'+e(p.name)+'" loading="lazy"></div>'
-        :'<div class="pthumb">'+(p.icon||'🏛️')+'</div>')
-      +'<div class="pinfo"><h3>'+e(p.name)+'</h3><p>'+e(p.description||'')+'</p>'
-      +'<span class="pbadge">'+e(p.category||'Tarihi Eser')+'</span></div>';
 
-    /* Tıklamayı burada bağla — string onclick yok */
-    card.addEventListener('click',function(){openDetail(p)});
-    g.appendChild(card);
-  });
-}
+  function renderAdminList() {
+    const container = document.getElementById('admin-list-container');
+    container.innerHTML = heritageList.map(h => `
+      <div class="heritage-card" style="justify-content:space-between; flex-wrap:wrap;">
+        <img src="${h.img}" width="55" height="55">
+        <div style="flex:2; padding-left:10px;"><b>${escapeHtml(h.name)}</b> <span style="font-size:10px; color:#888;">(${h.type})</span><br><small>${escapeHtml(h.desc.substring(0,45))}</small></div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn-outline" style="padding:6px 12px;" onclick="app.editHeritage(${h.id})"><i class="fas fa-edit"></i></button>
+          <button class="btn-outline" style="padding:6px 12px; color:#b1624b;" onclick="app.deleteHeritage(${h.id})"><i class="fas fa-trash"></i></button>
+        </div>
+      </div>
+    `).join('');
+  }
 
-window.filterPlaces=function(q){
-  var t=q.toLowerCase();
-  buildList(places.filter(function(p){
-    return (p.name||'').toLowerCase().includes(t)
-      ||(p.description||'').toLowerCase().includes(t)
-      ||(p.category||'').toLowerCase().includes(t);
-  }));
-};
+  function showDetail(id) {
+    const item = heritageList.find(h => h.id === id);
+    if (!item) return;
+    document.getElementById('modal-img').src = item.img;
+    document.getElementById('modal-name').innerText = item.name;
+    document.getElementById('modal-desc').innerText = item.desc;
+    document.getElementById('detail-modal').classList.add('show');
+    const speakBtn = document.getElementById('speak-btn');
+    const newBtn = speakBtn.cloneNode(true);
+    speakBtn.parentNode.replaceChild(newBtn, speakBtn);
+    newBtn.addEventListener('click', () => {
+      if (currentUtterance) window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(`${item.name}. ${item.desc}`);
+      utterance.lang = 'tr-TR';
+      currentUtterance = utterance;
+      window.speechSynthesis.speak(utterance);
+    });
+  }
+  function closeModal() { document.getElementById('detail-modal').classList.remove('show'); if (currentUtterance) window.speechSynthesis.cancel(); }
 
-/* ══ KONUM ══ */
-window.locateMe=function(){
-  if(!navigator.geolocation){toast('Konum desteklenmiyor');return}
-  toast('Konum alınıyor…');
-  navigator.geolocation.getCurrentPosition(function(pos){
-    var lt=pos.coords.latitude,ln=pos.coords.longitude;
-    if(umarker) gmap.removeLayer(umarker);
-    var d=document.createElement('div');d.className='udot';
-    umarker=L.marker([lt,ln],{
-      icon:L.divIcon({className:'',html:d.outerHTML,iconSize:[16,16],iconAnchor:[8,8]}),
-      zIndexOffset:999
-    }).addTo(gmap);
-    gmap.setView([lt,ln],16,{animate:true});
-    toast('Konumunuz gösteriliyor ✓');
-  },function(){toast('Konum alınamadı. İzin verin.')},{enableHighAccuracy:true,timeout:10000});
-};
+  function updateDateTime() {
+    const now = new Date();
+    const formatted = now.toLocaleDateString('tr-TR', { year: 'numeric', month: 'long', day: 'numeric' }) + ' · ' + now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('liveDateTime').innerText = formatted;
+  }
+  setInterval(updateDateTime, 1000);
+  updateDateTime();
 
-/* ══ SESLİ REHBER ══ */
-function startAudio(p){
-  if(!p||!p.audioText){toast('Sesli anlatım mevcut değil');return}
-  var bar=document.getElementById('abar');
-  document.getElementById('abar-icon').textContent=p.icon||'🏛️';
-  document.getElementById('abar-name').textContent=p.name;
-  document.getElementById('abar-stat').textContent='Hazırlanıyor…';
-  document.getElementById('abar-play').textContent='⏸';
-  document.getElementById('abar-fill').style.width='0%';
-  bar.classList.add('on');
-
-  if(synth.speaking||synth.pending) synth.cancel();
-
-  setTimeout(function(){
-    utt=new SpeechSynthesisUtterance(p.audioText);
-    utt.lang='tr-TR';utt.rate=0.9;utt.pitch=1;utt.volume=1;
-    utt.onstart=function(){playing=true;paused=false;document.getElementById('abar-stat').textContent='Oynatılıyor…';document.getElementById('abar-play').textContent='⏸'};
-    utt.onend=function(){playing=false;document.getElementById('abar-stat').textContent='Tamamlandı';document.getElementById('abar-play').textContent='▶';document.getElementById('abar-fill').style.width='100%'};
-    utt.onerror=function(){playing=false;document.getElementById('abar-stat').textContent='Ses çalınamadı';document.getElementById('abar-play').textContent='▶'};
-    utt.onboundary=function(ev){if(utt.text&&utt.text.length>0) document.getElementById('abar-fill').style.width=Math.round(ev.charIndex/utt.text.length*100)+'%'};
-    synth.speak(utt);
-  },200);
-}
-
-window.toggleAudio=function(){
-  if(paused){synth.resume();paused=false;document.getElementById('abar-play').textContent='⏸';document.getElementById('abar-stat').textContent='Oynatılıyor…'}
-  else{synth.pause();paused=true;document.getElementById('abar-play').textContent='▶';document.getElementById('abar-stat').textContent='Duraklatıldı'}
-};
-window.closeAudio=function(){
-  synth.cancel();playing=false;paused=false;
-  document.getElementById('abar').classList.remove('on');
-  document.getElementById('abar-fill').style.width='0%';
-};
-document.addEventListener('visibilitychange',function(){if(!document.hidden&&playing&&!paused&&synth.paused) synth.resume()});
-
-/* ══ QR ══ */
-async function startQR(){
-  if(typeof Html5Qrcode==='undefined'||qrOn) return;
-  qrOn=true;qrScan=new Html5Qrcode('qr-reader');
-  try{
-    await qrScan.start({facingMode:'environment'},{fps:10,qrbox:{width:200,height:200}},function(txt){
-      stopQR();
-      var id=null;
-      if(txt.startsWith('kula-place:')) id=txt.replace('kula-place:','').trim();
-      else{try{id=new URL(txt).searchParams.get('id')}catch(ex){} if(!id) id=txt.trim()}
-      var p=places.find(function(x){return x.id===id});
-      if(p) openDetail(p); else{toast('Eser bulunamadı');goTab('map')}
-    },null);
-  }catch(ex){toast('Kameraya erişilemedi');hidePanel('qr')}
-}
-
-function stopQR(){
-  if(qrScan){try{qrScan.stop()}catch(ex){}try{qrScan.clear()}catch(ex){} qrScan=null}
-  qrOn=false;
-}
-window.stopQR=function(){stopQR();hidePanel('qr')};
-
-/* ══ BOOT ══ */
-async function boot(){
-  try{buildMap();await loadData();buildMarkers()}catch(ex){console.error(ex)}
-  var ld=document.getElementById('loader');
-  ld.classList.add('gone');
-  setTimeout(function(){ld.style.display='none'},500);
-}
-if(typeof L!=='undefined') boot(); else window.addEventListener('load',boot);
+  const app = {
+    switchPanel: (target) => {
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('show'));
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      if (target === 'map') document.getElementById('nav-map').classList.add('active');
+      else if (target === 'list') { document.getElementById('list-panel').classList.add('show'); document.getElementById('nav-list').classList.add('active'); app.filterList(); }
+      else if (target === 'admin') { document.getElementById('admin-panel').classList.add('show'); document.getElementById('nav-admin').classList.add('active'); if (document.getElementById('admin-dashboard').style.display === 'block') renderAdminList(); }
+    },
+    filterList: () => renderUserList(document.getElementById('search-input').value),
+    showDetail, closeModal, locateUser, getRouteTo,
+    authLogin: () => {
+      let u = document.getElementById('admin-user').value, p = document.getElementById('admin-pass').value;
+      if (u === "Halo" && p === "13001300") { document.getElementById('admin-login-area').style.display = 'none'; document.getElementById('admin-dashboard').style.display = 'block'; renderAdminList(); }
+      else alert("Hatalı giriş!");
+    },
+    authLogout: () => { document.getElementById('admin-login-area').style.display = 'block'; document.getElementById('admin-dashboard').style.display = 'none'; app.closeEditor(); },
+    openEditor: (heritage=null) => {
+      document.getElementById('admin-editor').style.display = 'block';
+      if (heritage) {
+        editingId = heritage.id;
+        document.getElementById('editor-title').innerText = "✏️ Eser Düzenle";
+        document.getElementById('edit-name').value = heritage.name;
+        document.getElementById('edit-type').value = heritage.type;
+        document.getElementById('edit-desc').value = heritage.desc;
+        document.getElementById('edit-img-url').value = heritage.img;
+        document.getElementById('edit-img-preview').src = heritage.img;
+        document.getElementById('edit-img-preview').style.display = 'block';
+        document.getElementById('photo-placeholder-text').style.display = 'none';
+        selectedCoords = { lat: heritage.lat, lng: heritage.lng };
+        document.getElementById('admin-loc-status').innerHTML = `<i class="fas fa-map-pin"></i> Mevcut konum (${heritage.lat.toFixed(5)})`;
+      } else {
+        editingId = null; selectedCoords = null;
+        document.getElementById('editor-title').innerText = "➕ Yeni Eser";
+        document.getElementById('edit-name').value = '';
+        document.getElementById('edit-type').value = 'tarihi';
+        document.getElementById('edit-desc').value = '';
+        document.getElementById('edit-img-url').value = '';
+        document.getElementById('edit-img-preview').style.display = 'none';
+        document.getElementById('photo-placeholder-text').style.display = 'block';
+        document.getElementById('admin-loc-status').innerHTML = `<i class="fas fa-map-marker-alt"></i> Konum belirtilmedi — haritaya tıkla veya GPS al`;
+      }
+    },
+    closeEditor: () => { document.getElementById('admin-editor').style.display = 'none'; editingId = null; selectedCoords = null; },
+    getCurrentPosition: () => {
+      navigator.geolocation.getCurrentPosition(pos => {
+        selectedCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        document.getElementById('admin-loc-status').innerHTML = `<i class="fas fa-check"></i> Konum alındı: ${selectedCoords.lat.toFixed(5)}`;
+        if (window.tempMarker) map.removeLayer(window.tempMarker);
+        window.tempMarker = L.marker([selectedCoords.lat, selectedCoords.lng], { icon: getIconByType('tarihi') }).addTo(map).bindPopup("Yeni eser konumu").openPopup();
+      }, err => { document.getElementById('admin-loc-status').innerHTML = `<i class="fas fa-exclamation-triangle"></i> GPS alınamadı`; });
+    },
+    previewImage: (input) => {
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => {
+          document.getElementById('edit-img-preview').src = e.target.result;
+          document.getElementById('edit-img-preview').style.display = 'block';
+          document.getElementById('photo-placeholder-text').style.display = 'none';
+          document.getElementById('edit-img-url').value = e.target.result;
+        };
+        reader.readAsDataURL(input.files[0]);
+      }
+    },
+    saveHeritage: () => {
+      const name = document.getElementById('edit-name').value.trim();
+      const type = document.getElementById('edit-type').value;
+      const desc = document.getElementById('edit-desc').value.trim();
+      let img = document.getElementById('edit-img-url').value.trim();
+      if (!name) { alert("Eser adı girin"); return; }
+      if (!selectedCoords) { alert("Konum belirleyin"); return; }
+      if (!img) img = "https://picsum.photos/id/100/200/150";
+      if (editingId) {
+        let idx = heritageList.findIndex(h => h.id === editingId);
+        if (idx !== -1) heritageList[idx] = { ...heritageList[idx], name, type, desc, img, lat: selectedCoords.lat, lng: selectedCoords.lng };
+      } else {
+        heritageList.push({ id: Date.now(), name, type, desc, img, lat: selectedCoords.lat, lng: selectedCoords.lng });
+      }
+      saveData(); renderMarkers(); renderUserList(document.getElementById('search-input')?.value || ""); renderAdminList(); app.closeEditor(); alert("Kaydedildi");
+    },
+    editHeritage: (id) => { let h = heritageList.find(h => h.id === id); if (h) app.openEditor(h); },
+    deleteHeritage: (id) => { if (confirm("Silinsin mi?")) { heritageList = heritageList.filter(h => h.id !== id); saveData(); renderMarkers(); renderUserList(document.getElementById('search-input')?.value || ""); renderAdminList(); if (editingId === id) app.closeEditor(); } }
+  };
+  window.app = app;
+  function escapeHtml(str) { return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
+  window.onload = () => { loadData(); initMap(); renderUserList(""); };
 </script>
 </body>
 </html>
